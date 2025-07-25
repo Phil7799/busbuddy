@@ -22,7 +22,8 @@ scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis
 
 # Google Sheet setup using Streamlit secrets
 try:
-    creds_json = st.secrets["GOOGLE_CREDENTIALS"]
+    # Access the JSON string from secrets
+    creds_json = st.secrets["GOOGLE_CREDENTIALS"]["value"]  # Adjust based on your TOML structure
     creds_dict = json.loads(creds_json)
     creds = service_account.Credentials.from_service_account_info(creds_dict, scopes=scope)
     gc = gspread.authorize(creds)
@@ -238,4 +239,4 @@ try:
 
 except Exception as e:
     st.error(f"Error fetching data: {str(e)}")
-    st.write("Please ensure the Google Sheet ID is correct and the sheet is publicly accessible.")
+    st.write("Please ensure the Google Sheet ID is correct, the sheet is accessible, and secrets are properly configured.")
