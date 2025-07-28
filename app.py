@@ -1,41 +1,23 @@
 import streamlit as st
-from google.oauth2 import service_account
-import gspread
 import pandas as pd
 import numpy as np
 import plotly.express as px
-import json
 
 # Set page config for full-screen layout
 st.set_page_config(page_title="Little BusBuddy Dashboard", page_icon="😍", layout="wide")
 
 # Streamlit app title and layout
-st.title("😍BusBuddy Performance Dashboard")
+st.title("😍 BusBuddy Performance Dashboard")
 st.subheader("2025 Quarterly Targets vs Achieved")
 
 # Filters
 product_filter = st.selectbox("Product:", ["All Products", "SaaS", "TaaS"])
 quarter_filter = st.selectbox("Quarter:", ["Q1", "Q2", "Q3", "Q4", "YTD"])
 
-# Define the scope for Google Sheets API
-scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
-
-# Google Sheet setup using Streamlit secrets
 try:
-    # Access the JSON string from secrets
-    creds_json = st.secrets["GOOGLE_CREDENTIALS"]["value"]  # Adjust based on your TOML structure
-    creds_dict = json.loads(creds_json)
-    creds = service_account.Credentials.from_service_account_info(creds_dict, scopes=scope)
-    gc = gspread.authorize(creds)
-    sheet = gc.open_by_key("1Q9vOTTf_yFm068upvSdQzgoMv8qZ4VXzEqors0TkO8c")
-
-    # Load data from sheets
-    revenue_ws = sheet.worksheet("Revenue")
-    acquisition_ws = sheet.worksheet("Acquisition")
-    
-    # Convert to DataFrames
-    revenue_data = pd.DataFrame(revenue_ws.get_all_records())
-    acquisition_data = pd.DataFrame(acquisition_ws.get_all_records())
+    # Load data from Excel file
+    revenue_data = pd.read_excel("busbuddy.xlsx", sheet_name="Revenue")
+    acquisition_data = pd.read_excel("busbuddy.xlsx", sheet_name="Acquisition")
 
     # Clean percentage data (remove % and convert to float), ensuring string input
     for df in [revenue_data, acquisition_data]:
@@ -239,4 +221,4 @@ try:
 
 except Exception as e:
     st.error(f"Error fetching data: {str(e)}")
-    st.write("Please ensure the Google Sheet ID is correct, the sheet is accessible, and secrets are properly configured.")
+    st.write("Please ensure the 'busbuddy.xlsx' file is in the project directory with 'Revenue' and 'Acquisition' sheets.")
