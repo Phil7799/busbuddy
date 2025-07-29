@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.express as px
+import openpyxl as xl
 
 # Set page config for full-screen layout
 st.set_page_config(page_title="Little BusBuddy Dashboard", page_icon="😍", layout="wide")
