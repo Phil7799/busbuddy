@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.express as px
-import openpyxl as xl
 
 # Set page config for full-screen layout
 st.set_page_config(page_title="Little BusBuddy Dashboard", page_icon="😍", layout="wide")
@@ -20,9 +19,17 @@ try:
     revenue_data = pd.read_excel("busbuddy.xlsx", sheet_name="Revenue")
     acquisition_data = pd.read_excel("busbuddy.xlsx", sheet_name="Acquisition")
 
-    # Clean percentage data (remove % and convert to float), ensuring string input
+    # Clean and convert columns to numeric, removing KES and commas
     for df in [revenue_data, acquisition_data]:
-        df["% of Target"] = df["% of Target"].astype(str).str.replace("%", "").replace("", np.nan).astype(float)
+        if "Target (KES)" in df.columns:
+            df["Target (KES)"] = pd.to_numeric(df["Target (KES)"].astype(str).str.replace("[KES,]", "", regex=True), errors="coerce")
+            df["Achieved (KES)"] = pd.to_numeric(df["Achieved (KES)"].astype(str).str.replace("[KES,]", "", regex=True), errors="coerce")
+        else:
+            df["Target"] = pd.to_numeric(df["Target"].astype(str), errors="coerce")
+            df["Achieved"] = pd.to_numeric(df["Achieved"].astype(str), errors="coerce")
+        # Calculate % of Target dynamically
+        df["% of Target"] = (df["Achieved (KES)"] / df["Target (KES)"] * 100).round(0) if "Target (KES)" in df.columns else (df["Achieved"] / df["Target"] * 100).round(0)
+        df["% of Target"] = df["% of Target"].replace([np.inf, -np.inf], np.nan).fillna(0)
 
     # Filter data based on product and quarter
     def filter_data(df, product, quarter):
@@ -38,15 +45,15 @@ try:
     acquisition_df = filter_data(acquisition_data, product_filter, quarter_filter)
 
     # Calculate totals
-    net_revenue_total = pd.to_numeric(revenue_df[revenue_df["Metric"] == "Net Revenue"]["Achieved ($)"].astype(str).str.replace("[$,]", "", regex=True), errors="coerce").sum()
-    gross_revenue_total = pd.to_numeric(revenue_df[revenue_df["Metric"] == "Gross Revenue"]["Achieved ($)"].astype(str).str.replace("[$,]", "", regex=True), errors="coerce").sum()
-    gross_adds_total = pd.to_numeric(acquisition_df[acquisition_df["Metric"] == "Gross Adds"]["Achieved"].astype(str), errors="coerce").sum()
-    net_adds_total = pd.to_numeric(acquisition_df[acquisition_df["Metric"] == "Net Adds"]["Achieved"].astype(str), errors="coerce").sum()
+    net_revenue_total = revenue_df[revenue_df["Metric"] == "Net Revenue"]["Achieved (KES)"].sum()
+    gross_revenue_total = revenue_df[revenue_df["Metric"] == "Gross Revenue"]["Achieved (KES)"].sum()
+    gross_adds_total = acquisition_df[acquisition_df["Metric"] == "Gross Adds"]["Achieved"].sum()
+    net_adds_total = acquisition_df[acquisition_df["Metric"] == "Net Adds"]["Achieved"].sum()
 
-    net_revenue_target = pd.to_numeric(revenue_df[revenue_df["Metric"] == "Net Revenue"]["Target ($)"].astype(str).str.replace("[$,]", "", regex=True), errors="coerce").sum()
-    gross_revenue_target = pd.to_numeric(revenue_df[revenue_df["Metric"] == "Gross Revenue"]["Target ($)"].astype(str).str.replace("[$,]", "", regex=True), errors="coerce").sum()
-    gross_adds_target = pd.to_numeric(acquisition_df[acquisition_df["Metric"] == "Gross Adds"]["Target"].astype(str), errors="coerce").sum()
-    net_adds_target = pd.to_numeric(acquisition_df[acquisition_df["Metric"] == "Net Adds"]["Target"].astype(str), errors="coerce").sum()
+    net_revenue_target = revenue_df[revenue_df["Metric"] == "Net Revenue"]["Target (KES)"].sum()
+    gross_revenue_target = revenue_df[revenue_df["Metric"] == "Gross Revenue"]["Target (KES)"].sum()
+    gross_adds_target = acquisition_df[acquisition_df["Metric"] == "Gross Adds"]["Target"].sum()
+    net_adds_target = acquisition_df[acquisition_df["Metric"] == "Net Adds"]["Target"].sum()
 
     net_revenue_pct = (net_revenue_total / net_revenue_target * 100) if net_revenue_target else 0
     gross_revenue_pct = (gross_revenue_total / gross_revenue_target * 100) if gross_revenue_target else 0
@@ -60,7 +67,7 @@ try:
             f"""
             <div style="background-color: #00008B; padding: 5px; border-radius: 5px; margin-bottom: 10px; font-style: italic; text-align: center;">
                 <h3 style="margin: 0;">Net Revenue</h3>
-                <p style="font-size: 30px; margin: 5px 0;">${net_revenue_total:,.0f}</p>
+                <p style="font-size: 30px; margin: 5px 0;">KES{net_revenue_total:,.0f}</p>
                 <p style="margin: 0;">{net_revenue_pct:.0f}% of target</p>
             </div>
             """,
@@ -71,7 +78,7 @@ try:
             f"""
             <div style="background-color: #00008B; padding: 5px; border-radius: 5px; margin-bottom: 10px; font-style: italic; text-align: center;">
                 <h3 style="margin: 0;">Gross Revenue</h3>
-                <p style="font-size: 30px; margin: 5px 0;">${gross_revenue_total:,.0f}</p>
+                <p style="font-size: 30px; margin: 5px 0;">KES{gross_revenue_total:,.0f}</p>
                 <p style="margin: 0;">{gross_revenue_pct:.0f}% of target</p>
             </div>
             """,
@@ -102,20 +109,16 @@ try:
 
     # Revenue Performance
     st.subheader("Revenue Performance")
-    revenue_df_display = revenue_df[["Quarter", "Product", "Metric", "Target ($)", "Achieved ($)", "% of Target"]].copy()
-    revenue_df_display["Target ($)"] = pd.to_numeric(revenue_df_display["Target ($)"].astype(str).str.replace("[$,]", "", regex=True), errors="coerce")
-    revenue_df_display["Achieved ($)"] = pd.to_numeric(revenue_df_display["Achieved ($)"].astype(str).str.replace("[$,]", "", regex=True), errors="coerce")
+    revenue_df_display = revenue_df[["Quarter", "Product", "Metric", "Target (KES)", "Achieved (KES)", "% of Target"]].copy()
     st.table(revenue_df_display.style.format({
-        "Target ($)": "${:,.0f}",
-        "Achieved ($)": "${:,.0f}",
+        "Target (KES)": "KES{:,.0f}",
+        "Achieved (KES)": "KES{:,.0f}",
         "% of Target": "{:.0f}%"
     }))
 
     # Acquisition Metrics
     st.subheader("Acquisition Metrics")
     acquisition_df_display = acquisition_df[["Quarter", "Product", "Metric", "Target", "Achieved", "% of Target"]].copy()
-    acquisition_df_display["Target"] = pd.to_numeric(acquisition_df_display["Target"].astype(str), errors="coerce")
-    acquisition_df_display["Achieved"] = pd.to_numeric(acquisition_df_display["Achieved"].astype(str), errors="coerce")
     st.table(acquisition_df_display.style.format({
         "Target": "{:,.0f}",
         "Achieved": "{:,.0f}",
@@ -129,16 +132,16 @@ try:
 
         # Pivot data to aggregate by quarter
         gross_revenue_pivot = revenue_df_all[revenue_df_all["Metric"] == "Gross Revenue"].pivot_table(
-            index="Quarter", values=["Target ($)", "Achieved ($)"], aggfunc="sum", fill_value=0
+            index="Quarter", values=["Target (KES)", "Achieved (KES)"], aggfunc="sum", fill_value=0
         )
         net_revenue_pivot = revenue_df_all[revenue_df_all["Metric"] == "Net Revenue"].pivot_table(
-            index="Quarter", values=["Target ($)", "Achieved ($)"], aggfunc="sum", fill_value=0
+            index="Quarter", values=["Target (KES)", "Achieved (KES)"], aggfunc="sum", fill_value=0
         )
 
         # Gross Revenue Comparison Bar Chart
         st.subheader("Gross Revenue Trends")
-        gross_target = pd.to_numeric(gross_revenue_pivot["Target ($)"].astype(str).str.replace("[$,]", "", regex=True), errors="coerce").reindex(quarters, fill_value=0)
-        gross_achieved = pd.to_numeric(gross_revenue_pivot["Achieved ($)"].astype(str).str.replace("[$,]", "", regex=True), errors="coerce").reindex(quarters, fill_value=0)
+        gross_target = gross_revenue_pivot["Target (KES)"].reindex(quarters, fill_value=0)
+        gross_achieved = gross_revenue_pivot["Achieved (KES)"].reindex(quarters, fill_value=0)
         forecast_gross = gross_target * 1.1
         chart_data = pd.DataFrame({
             "Quarter": quarters * 3,
@@ -151,8 +154,8 @@ try:
 
         # Net Revenue Comparison Bar Chart
         st.subheader("Net Revenue Trends")
-        net_target = pd.to_numeric(net_revenue_pivot["Target ($)"].astype(str).str.replace("[$,]", "", regex=True), errors="coerce").reindex(quarters, fill_value=0)
-        net_achieved = pd.to_numeric(net_revenue_pivot["Achieved ($)"].astype(str).str.replace("[$,]", "", regex=True), errors="coerce").reindex(quarters, fill_value=0)
+        net_target = net_revenue_pivot["Target (KES)"].reindex(quarters, fill_value=0)
+        net_achieved = net_revenue_pivot["Achieved (KES)"].reindex(quarters, fill_value=0)
         forecast_net = net_target * 1.05
         chart_data = pd.DataFrame({
             "Quarter": quarters * 3,
@@ -178,8 +181,8 @@ try:
 
         # Gross Adds Comparison Bar Chart
         st.subheader("Gross Adds Trends")
-        gross_adds_target = pd.to_numeric(gross_adds_pivot["Target"].astype(str), errors="coerce").reindex(quarters, fill_value=0)
-        gross_adds_achieved = pd.to_numeric(gross_adds_pivot["Achieved"].astype(str), errors="coerce").reindex(quarters, fill_value=0)
+        gross_adds_target = gross_adds_pivot["Target"].reindex(quarters, fill_value=0)
+        gross_adds_achieved = gross_adds_pivot["Achieved"].reindex(quarters, fill_value=0)
         forecast_gross_adds = gross_adds_target * 1.1
         chart_data = pd.DataFrame({
             "Quarter": quarters * 3,
@@ -192,8 +195,8 @@ try:
 
         # Net Adds Comparison Bar Chart
         st.subheader("Net Adds Trends")
-        net_adds_target = pd.to_numeric(net_adds_pivot["Target"].astype(str), errors="coerce").reindex(quarters, fill_value=0)
-        net_adds_achieved = pd.to_numeric(net_adds_pivot["Achieved"].astype(str), errors="coerce").reindex(quarters, fill_value=0)
+        net_adds_target = net_adds_pivot["Target"].reindex(quarters, fill_value=0)
+        net_adds_achieved = net_adds_pivot["Achieved"].reindex(quarters, fill_value=0)
         forecast_net_adds = net_adds_target * 1.05
         chart_data = pd.DataFrame({
             "Quarter": quarters * 3,
@@ -207,16 +210,14 @@ try:
     # Cumulative Performance
     if quarter_filter == "YTD":
         st.subheader("Cumulative Performance")
-        ytd_df = revenue_df[["Quarter", "Product", "Metric", "Target ($)", "Achieved ($)", "% of Target"]].rename(columns={
-            "Target ($)": "Annual Target",
-            "Achieved ($)": "YTD Achieved",
+        ytd_df = revenue_df[["Quarter", "Product", "Metric", "Target (KES)", "Achieved (KES)", "% of Target"]].rename(columns={
+            "Target (KES)": "Annual Target",
+            "Achieved (KES)": "YTD Achieved",
             "% of Target": "% of Annual"
         })
-        ytd_df["Annual Target"] = pd.to_numeric(ytd_df["Annual Target"].astype(str).str.replace("[$,]", "", regex=True), errors="coerce")
-        ytd_df["YTD Achieved"] = pd.to_numeric(ytd_df["YTD Achieved"].astype(str).str.replace("[$,]", "", regex=True), errors="coerce")
         st.table(ytd_df.style.format({
-            "Annual Target": "${:,.0f}",
-            "YTD Achieved": "${:,.0f}",
+            "Annual Target": "KES{:,.0f}",
+            "YTD Achieved": "KES{:,.0f}",
             "% of Annual": "{:.0f}%"
         }))
 
