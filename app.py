@@ -4,7 +4,7 @@ import numpy as np
 import plotly.express as px
 
 # Set page config for full-screen layout
-st.set_page_config(page_title="Little BusBuddy Dashboard", page_icon="😍", layout="wide")
+st.set_page_config(page_title="Little BusBuddy Dashboard", page_icon="https://res.cloudinary.com/dnq8ne9lx/image/upload/v1753860594/infograph_ewfmm6.ico", layout="wide")
 
 # Streamlit app title and layout
 st.title("😍 BusBuddy Performance Dashboard")
