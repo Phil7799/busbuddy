@@ -11,8 +11,13 @@ st.title("😍 BusBuddy Performance Dashboard")
 st.subheader("2025 Quarterly Targets vs Achieved")
 
 # Filters
-product_filter = st.selectbox("Product:", ["All Products", "SaaS", "TaaS"])
-quarter_filter = st.selectbox("Quarter:", ["Q1", "Q2", "Q3", "Q4", "YTD"])
+col1, col2, col3 = st.columns(3)
+with col1:
+    owner_filter = st.selectbox("Owner:", ["All Owners", "Peter", "Mercy"])
+with col2:
+    product_filter = st.selectbox("Product:", ["All Products", "SaaS", "TaaS"])
+with col3:
+    quarter_filter = st.selectbox("Quarter:", ["Q1", "Q2", "Q3", "Q4", "YTD"])
 
 try:
     # Load data from Excel file
@@ -31,8 +36,10 @@ try:
         df["% of Target"] = (df["Achieved (KES)"] / df["Target (KES)"] * 100).round(0) if "Target (KES)" in df.columns else (df["Achieved"] / df["Target"] * 100).round(0)
         df["% of Target"] = df["% of Target"].replace([np.inf, -np.inf], np.nan).fillna(0)
 
-    # Filter data based on product and quarter
-    def filter_data(df, product, quarter):
+    # Filter data based on owner, product and quarter
+    def filter_data(df, owner, product, quarter):
+        if owner != "All Owners":
+            df = df[df["Owner"] == owner]
         if product != "All Products":
             df = df[df["Product"] == product]
         if quarter != "YTD":
@@ -41,8 +48,8 @@ try:
             df = df[df["Quarter"] == "Cumulative Performance (YTD)"]
         return df
 
-    revenue_df = filter_data(revenue_data, product_filter, quarter_filter)
-    acquisition_df = filter_data(acquisition_data, product_filter, quarter_filter)
+    revenue_df = filter_data(revenue_data, owner_filter, product_filter, quarter_filter)
+    acquisition_df = filter_data(acquisition_data, owner_filter, product_filter, quarter_filter)
 
     # Calculate totals
     net_revenue_total = revenue_df[revenue_df["Metric"] == "Net Revenue"]["Achieved (KES)"].sum()
@@ -65,7 +72,7 @@ try:
     with col1:
         st.markdown(
             f"""
-            <div style="background-color: #00008B; padding: 5px; border-radius: 5px; margin-bottom: 10px; font-style: italic; text-align: center;">
+            <div style="background-color: #00008B; padding: 5px; border-radius: 5px; margin-bottom: px; font-style: italic; text-align: center;">
                 <h3 style="margin: 0;">Net Revenue</h3>
                 <p style="font-size: 30px; margin: 5px 0;">KES{net_revenue_total:,.0f}</p>
                 <p style="margin: 0;">{net_revenue_pct:.0f}% of target</p>
@@ -109,7 +116,7 @@ try:
 
     # Revenue Performance
     st.subheader("Revenue Performance")
-    revenue_df_display = revenue_df[["Quarter", "Product", "Metric", "Target (KES)", "Achieved (KES)", "% of Target"]].copy()
+    revenue_df_display = revenue_df[["Quarter", "Owner", "Product", "Metric", "Target (KES)", "Achieved (KES)", "% of Target"]].copy()
     st.table(revenue_df_display.style.format({
         "Target (KES)": "KES{:,.0f}",
         "Achieved (KES)": "KES{:,.0f}",
@@ -118,7 +125,7 @@ try:
 
     # Acquisition Metrics
     st.subheader("Acquisition Metrics")
-    acquisition_df_display = acquisition_df[["Quarter", "Product", "Metric", "Target", "Achieved", "% of Target"]].copy()
+    acquisition_df_display = acquisition_df[["Quarter", "Owner", "Product", "Metric", "Target", "Achieved", "% of Target"]].copy()
     st.table(acquisition_df_display.style.format({
         "Target": "{:,.0f}",
         "Achieved": "{:,.0f}",
@@ -129,6 +136,10 @@ try:
     if quarter_filter != "YTD":
         quarters = ["Q1", "Q2", "Q3", "Q4"]
         revenue_df_all = revenue_data[revenue_data["Quarter"].isin(quarters)].copy()
+        if owner_filter != "All Owners":
+            revenue_df_all = revenue_df_all[revenue_df_all["Owner"] == owner_filter]
+        if product_filter != "All Products":
+            revenue_df_all = revenue_df_all[revenue_df_all["Product"] == product_filter]
 
         # Pivot data to aggregate by quarter
         gross_revenue_pivot = revenue_df_all[revenue_df_all["Metric"] == "Gross Revenue"].pivot_table(
@@ -170,6 +181,10 @@ try:
     if quarter_filter != "YTD":
         quarters = ["Q1", "Q2", "Q3", "Q4"]
         acquisition_df_all = acquisition_data[acquisition_data["Quarter"].isin(quarters)].copy()
+        if owner_filter != "All Owners":
+            acquisition_df_all = acquisition_df_all[acquisition_df_all["Owner"] == owner_filter]
+        if product_filter != "All Products":
+            acquisition_df_all = acquisition_df_all[acquisition_df_all["Product"] == product_filter]
 
         # Pivot data to aggregate by quarter
         gross_adds_pivot = acquisition_df_all[acquisition_df_all["Metric"] == "Gross Adds"].pivot_table(
@@ -210,7 +225,7 @@ try:
     # Cumulative Performance
     if quarter_filter == "YTD":
         st.subheader("Cumulative Performance")
-        ytd_df = revenue_df[["Quarter", "Product", "Metric", "Target (KES)", "Achieved (KES)", "% of Target"]].rename(columns={
+        ytd_df = revenue_df[["Quarter", "Owner", "Product", "Metric", "Target (KES)", "Achieved (KES)", "% of Target"]].rename(columns={
             "Target (KES)": "Annual Target",
             "Achieved (KES)": "YTD Achieved",
             "% of Target": "% of Annual"
