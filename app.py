@@ -56,63 +56,77 @@ try:
     gross_revenue_total = revenue_df[revenue_df["Metric"] == "Gross Revenue"]["Achieved (KES)"].sum()
     gross_adds_total = acquisition_df[acquisition_df["Metric"] == "Gross Adds"]["Achieved"].sum()
     net_adds_total = acquisition_df[acquisition_df["Metric"] == "Net Adds"]["Achieved"].sum()
+    free_trial_total = acquisition_df[acquisition_df["Metric"] == "Free Trial"]["Achieved"].sum()
 
     net_revenue_target = revenue_df[revenue_df["Metric"] == "Net Revenue"]["Target (KES)"].sum()
     gross_revenue_target = revenue_df[revenue_df["Metric"] == "Gross Revenue"]["Target (KES)"].sum()
     gross_adds_target = acquisition_df[acquisition_df["Metric"] == "Gross Adds"]["Target"].sum()
     net_adds_target = acquisition_df[acquisition_df["Metric"] == "Net Adds"]["Target"].sum()
+    free_trial_target = acquisition_df[acquisition_df["Metric"] == "Free Trial"]["Target"].sum()
 
     net_revenue_pct = (net_revenue_total / net_revenue_target * 100) if net_revenue_target else 0
     gross_revenue_pct = (gross_revenue_total / gross_revenue_target * 100) if gross_revenue_target else 0
     gross_adds_pct = (gross_adds_total / gross_adds_target * 100) if gross_adds_target else 0
     net_adds_pct = (net_adds_total / net_adds_target * 100) if net_adds_target else 0
+    free_trial_pct = (free_trial_total / free_trial_target * 100) if free_trial_target else 0
 
     # Display totals with styled boxes
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2, col3, col4, col5 = st.columns(5)  # Updated to 5 columns
     with col1:
         st.markdown(
-            f"""
-            <div style="background-color: #00008B; padding: 5px; border-radius: 5px; margin-bottom: px; font-style: italic; text-align: center;">
-                <h3 style="margin: 0;">Net Revenue</h3>
-                <p style="font-size: 30px; margin: 5px 0;">KES{net_revenue_total:,.0f}</p>
-                <p style="margin: 0;">{net_revenue_pct:.0f}% of target</p>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
+        f"""
+        <div style="background-color: #00008B; padding: 5px; border-radius: 5px; margin-bottom: 10px; font-style: italic; text-align: center;">
+            <h3 style="margin: 0;">Net Revenue</h3>
+            <p style="font-size: 30px; margin: 5px 0;">KES{net_revenue_total:,.0f}</p>
+            <p style="margin: 0;">{net_revenue_pct:.0f}% of target</p>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
     with col2:
         st.markdown(
-            f"""
-            <div style="background-color: #00008B; padding: 5px; border-radius: 5px; margin-bottom: 10px; font-style: italic; text-align: center;">
-                <h3 style="margin: 0;">Gross Revenue</h3>
-                <p style="font-size: 30px; margin: 5px 0;">KES{gross_revenue_total:,.0f}</p>
-                <p style="margin: 0;">{gross_revenue_pct:.0f}% of target</p>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
+        f"""
+        <div style="background-color: #00008B; padding: 5px; border-radius: 5px; margin-bottom: 10px; font-style: italic; text-align: center;">
+            <h3 style="margin: 0;">Gross Revenue</h3>
+            <p style="font-size: 30px; margin: 5px 0;">KES{gross_revenue_total:,.0f}</p>
+            <p style="margin: 0;">{gross_revenue_pct:.0f}% of target</p>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
     with col3:
         st.markdown(
-            f"""
-            <div style="background-color: #00008B; padding: 5px; border-radius: 5px; margin-bottom: 10px; font-style: italic; text-align: center;">
-                <h3 style="margin: 0;">Gross Adds</h3>
-                <p style="font-size: 30px; margin: 5px 0;">{gross_adds_total:,.0f}</p>
-                <p style="margin: 0;">{gross_adds_pct:.0f}% of target</p>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
+        f"""
+        <div style="background-color: #00008B; padding: 5px; border-radius: 5px; margin-bottom: 10px; font-style: italic; text-align: center;">
+            <h3 style="margin: 0;">Gross Adds</h3>
+            <p style="font-size: 30px; margin: 5px 0;">{gross_adds_total:,.0f}</p>
+            <p style="margin: 0;">{gross_adds_pct:.0f}% of target</p>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
     with col4:
         st.markdown(
-            f"""
-            <div style="background-color: #00008B; padding: 5px; border-radius: 5px; margin-bottom: 10px; font-style: italic; text-align: center;">
-                <h3 style="margin: 0;">Net Adds</h3>
-                <p style="font-size: 30px; margin: 5px 0;">{net_adds_total:,.0f}</p>
-                <p style="margin: 0;">{net_adds_pct:.0f}% of target</p>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
+        f"""
+        <div style="background-color: #00008B; padding: 5px; border-radius: 5px; margin-bottom: 10px; font-style: italic; text-align: center;">
+            <h3 style="margin: 0;">Net Adds</h3>
+            <p style="font-size: 30px; margin: 5px 0;">{net_adds_total:,.0f}</p>
+            <p style="margin: 0;">{net_adds_pct:.0f}% of target</p>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+    with col5:
+        st.markdown(
+        f"""
+        <div style="background-color: #00008B; padding: 5px; border-radius: 5px; margin-bottom: 10px; font-style: italic; text-align: center;">
+            <h3 style="margin: 0;">Free Trials</h3>
+            <p style="font-size: 30px; margin: 5px 0;">{free_trial_total:,.0f}</p>
+            <p style="margin: 0;">{free_trial_pct:.0f}% of target</p>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
     # Revenue Performance
     st.subheader("Revenue Performance")
@@ -180,47 +194,64 @@ try:
     # Quarterly Trends for Acquisition Metrics (Comparison Bar Charts with Plotly)
     if quarter_filter != "YTD":
         quarters = ["Q1", "Q2", "Q3", "Q4"]
-        acquisition_df_all = acquisition_data[acquisition_data["Quarter"].isin(quarters)].copy()
-        if owner_filter != "All Owners":
-            acquisition_df_all = acquisition_df_all[acquisition_df_all["Owner"] == owner_filter]
-        if product_filter != "All Products":
-            acquisition_df_all = acquisition_df_all[acquisition_df_all["Product"] == product_filter]
+    acquisition_df_all = acquisition_data[acquisition_data["Quarter"].isin(quarters)].copy()
+    if owner_filter != "All Owners":
+        acquisition_df_all = acquisition_df_all[acquisition_df_all["Owner"] == owner_filter]
+    if product_filter != "All Products":
+        acquisition_df_all = acquisition_df_all[acquisition_df_all["Product"] == product_filter]
 
-        # Pivot data to aggregate by quarter
-        gross_adds_pivot = acquisition_df_all[acquisition_df_all["Metric"] == "Gross Adds"].pivot_table(
-            index="Quarter", values=["Target", "Achieved"], aggfunc="sum", fill_value=0
-        )
-        net_adds_pivot = acquisition_df_all[acquisition_df_all["Metric"] == "Net Adds"].pivot_table(
-            index="Quarter", values=["Target", "Achieved"], aggfunc="sum", fill_value=0
-        )
+    # Pivot data to aggregate by quarter
+    gross_adds_pivot = acquisition_df_all[acquisition_df_all["Metric"] == "Gross Adds"].pivot_table(
+        index="Quarter", values=["Target", "Achieved"], aggfunc="sum", fill_value=0
+    )
+    net_adds_pivot = acquisition_df_all[acquisition_df_all["Metric"] == "Net Adds"].pivot_table(
+        index="Quarter", values=["Target", "Achieved"], aggfunc="sum", fill_value=0
+    )
+    free_trial_pivot = acquisition_df_all[acquisition_df_all["Metric"] == "Free Trial"].pivot_table(
+        index="Quarter", values=["Target", "Achieved"], aggfunc="sum", fill_value=0
+    )
 
-        # Gross Adds Comparison Bar Chart
-        st.subheader("Gross Adds Trends")
-        gross_adds_target = gross_adds_pivot["Target"].reindex(quarters, fill_value=0)
-        gross_adds_achieved = gross_adds_pivot["Achieved"].reindex(quarters, fill_value=0)
-        forecast_gross_adds = gross_adds_target * 1.1
-        chart_data = pd.DataFrame({
-            "Quarter": quarters * 3,
-            "Value": list(gross_adds_target) + list(gross_adds_achieved) + list(forecast_gross_adds),
-            "Type": ["Target"] * 4 + ["Achieved"] * 4 + ["Forecast"] * 4
-        })
-        fig = px.bar(chart_data, x="Quarter", y="Value", color="Type", barmode="group", title="Gross Adds Trends",
-                     color_discrete_map={"Target": "red", "Achieved": "green", "Forecast": "yellow"})
-        st.plotly_chart(fig)
+    # Gross Adds Comparison Bar Chart
+    st.subheader("Gross Adds Trends")
+    gross_adds_target = gross_adds_pivot["Target"].reindex(quarters, fill_value=0)
+    gross_adds_achieved = gross_adds_pivot["Achieved"].reindex(quarters, fill_value=0)
+    forecast_gross_adds = gross_adds_target * 1.1
+    chart_data = pd.DataFrame({
+        "Quarter": quarters * 3,
+        "Value": list(gross_adds_target) + list(gross_adds_achieved) + list(forecast_gross_adds),
+        "Type": ["Target"] * 4 + ["Achieved"] * 4 + ["Forecast"] * 4
+    })
+    fig = px.bar(chart_data, x="Quarter", y="Value", color="Type", barmode="group", title="Gross Adds Trends",
+                 color_discrete_map={"Target": "red", "Achieved": "green", "Forecast": "yellow"})
+    st.plotly_chart(fig)
 
-        # Net Adds Comparison Bar Chart
-        st.subheader("Net Adds Trends")
-        net_adds_target = net_adds_pivot["Target"].reindex(quarters, fill_value=0)
-        net_adds_achieved = net_adds_pivot["Achieved"].reindex(quarters, fill_value=0)
-        forecast_net_adds = net_adds_target * 1.05
-        chart_data = pd.DataFrame({
-            "Quarter": quarters * 3,
-            "Value": list(net_adds_target) + list(net_adds_achieved) + list(forecast_net_adds),
-            "Type": ["Target"] * 4 + ["Achieved"] * 4 + ["Forecast"] * 4
-        })
-        fig = px.bar(chart_data, x="Quarter", y="Value", color="Type", barmode="group", title="Net Adds Trends",
-                     color_discrete_map={"Target": "red", "Achieved": "green", "Forecast": "yellow"})
-        st.plotly_chart(fig)
+    # Net Adds Comparison Bar Chart
+    st.subheader("Net Adds Trends")
+    net_adds_target = net_adds_pivot["Target"].reindex(quarters, fill_value=0)
+    net_adds_achieved = net_adds_pivot["Achieved"].reindex(quarters, fill_value=0)
+    forecast_net_adds = net_adds_target * 1.05
+    chart_data = pd.DataFrame({
+        "Quarter": quarters * 3,
+        "Value": list(net_adds_target) + list(net_adds_achieved) + list(forecast_net_adds),
+        "Type": ["Target"] * 4 + ["Achieved"] * 4 + ["Forecast"] * 4
+    })
+    fig = px.bar(chart_data, x="Quarter", y="Value", color="Type", barmode="group", title="Net Adds Trends",
+                 color_discrete_map={"Target": "red", "Achieved": "green", "Forecast": "yellow"})
+    st.plotly_chart(fig)
+
+    # Free Trial Comparison Bar Chart
+    st.subheader("Free Trial Trends")
+    free_trial_target = free_trial_pivot["Target"].reindex(quarters, fill_value=0)
+    free_trial_achieved = free_trial_pivot["Achieved"].reindex(quarters, fill_value=0)
+    forecast_free_trial = free_trial_target * 1.1
+    chart_data = pd.DataFrame({
+        "Quarter": quarters * 3,
+        "Value": list(free_trial_target) + list(free_trial_achieved) + list(forecast_free_trial),
+        "Type": ["Target"] * 4 + ["Achieved"] * 4 + ["Forecast"] * 4
+    })
+    fig = px.bar(chart_data, x="Quarter", y="Value", color="Type", barmode="group", title="Free Trial Trends",
+                 color_discrete_map={"Target": "red", "Achieved": "green", "Forecast": "yellow"})
+    st.plotly_chart(fig)
 
     # Cumulative Performance
     if quarter_filter == "YTD":
