@@ -1,0 +1,2729 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BusBuddy Performance Dashboard</title>
+    <!-- Chart.js for visualizations -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- PapaParse for CSV/Excel parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <!-- ExcelJS for parsing Excel files -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #f5f7fa;
+            color: #333;
+            padding: 20px;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        
+        body.dark-mode {
+            background-color: #121212;
+            color: #e0e0e0;
+        }
+        
+        .dashboard-container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        /* Theme Toggle */
+        
+        .theme-toggle-container {
+            position: absolute;
+            top: 25px;
+            right: 30px;
+        }
+        
+        .theme-toggle {
+            background-color: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            border-radius: 50px;
+            padding: 8px 15px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(5px);
+        }
+        
+        .theme-toggle:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+        
+        .theme-toggle .icon {
+            font-size: 18px;
+        }
+        
+        .dark-mode .theme-toggle {
+            background-color: rgba(0, 0, 0, 0.2);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+        /* Header Styles */
+        
+        .header {
+            background: linear-gradient(135deg, #1a237e 0%, #283593 100%);
+            color: white;
+            padding: 25px 30px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
+            position: relative;
+        }
+        
+        .dark-mode .header {
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
+        }
+        
+        .header h1 {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 5px;
+            letter-spacing: 0.5px;
+        }
+        
+        .header p {
+            font-size: 16px;
+            opacity: 0.9;
+            margin-bottom: 10px;
+        }
+        /* Company colors */
+        
+         :root {
+            --primary-blue: #1a237e;
+            --secondary-blue: #283593;
+            --light-blue: #5c6bc0;
+            --accent-green: #00c853;
+            --accent-orange: #ff9800;
+            --accent-red: #f44336;
+            --light-gray: #f5f7fa;
+            --dark-gray: #333;
+            --card-bg: white;
+            --card-border: #eee;
+            --text-color: #333;
+            --text-color-light: #666;
+            --hover-color: #f9f9f9;
+        }
+        
+        .dark-mode {
+            --primary-blue: #5c6bc0;
+            --secondary-blue: #7986cb;
+            --light-blue: #8c9eff;
+            --accent-green: #69f0ae;
+            --accent-orange: #ffb74d;
+            --accent-red: #ef5350;
+            --light-gray: #121212;
+            --dark-gray: #e0e0e0;
+            --card-bg: #1e1e1e;
+            --card-border: #333;
+            --text-color: #e0e0e0;
+            --text-color-light: #b0b0b0;
+            --hover-color: #2a2a2a;
+        }
+        /* Upload Section */
+        
+        .upload-section {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+            border-left: 5px solid var(--primary-blue);
+            color: var(--text-color);
+            transition: all 0.3s ease;
+        }
+        
+        .dark-mode .upload-section {
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        .upload-section h3 {
+            color: var(--primary-blue);
+            margin-bottom: 15px;
+            font-size: 20px;
+        }
+        
+        .file-upload {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .file-input {
+            padding: 12px 15px;
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            flex-grow: 1;
+            cursor: pointer;
+            transition: all 0.3s;
+            background-color: var(--card-bg);
+            color: var(--text-color);
+        }
+        
+        .dark-mode .file-input {
+            border-color: #555;
+            background-color: #2a2a2a;
+        }
+        
+        .file-input:hover {
+            border-color: var(--light-blue);
+            background-color: var(--hover-color);
+        }
+        
+        .upload-btn {
+            background-color: var(--primary-blue);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background-color 0.3s;
+        }
+        
+        .upload-btn:hover {
+            background-color: var(--secondary-blue);
+        }
+        
+        .sample-data-btn {
+            background-color: #e8eaf6;
+            color: var(--primary-blue);
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background-color 0.3s;
+        }
+        
+        .dark-mode .sample-data-btn {
+            background-color: #2a2a2a;
+            color: var(--light-blue);
+        }
+        
+        .sample-data-btn:hover {
+            background-color: #d1d9ff;
+        }
+        
+        .dark-mode .sample-data-btn:hover {
+            background-color: #3a3a3a;
+        }
+        
+        .upload-status {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 5px;
+            display: none;
+        }
+        
+        .upload-status.success {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+            border-left: 4px solid #4caf50;
+        }
+        
+        .upload-status.error {
+            background-color: #ffebee;
+            color: #c62828;
+            border-left: 4px solid #f44336;
+        }
+        
+        .dark-mode .upload-status.success {
+            background-color: #1b5e20;
+            color: #a5d6a7;
+        }
+        
+        .dark-mode .upload-status.error {
+            background-color: #b71c1c;
+            color: #ffcdd2;
+        }
+        /* Filters Section */
+        
+        .filters-section {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+            border-left: 5px solid var(--accent-green);
+            color: var(--text-color);
+            transition: all 0.3s ease;
+        }
+        
+        .dark-mode .filters-section {
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        .filters-section h3 {
+            color: var(--primary-blue);
+            margin-bottom: 15px;
+            font-size: 20px;
+        }
+        
+        .filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        
+        .filter-group {
+            flex: 1;
+            min-width: 200px;
+        }
+        
+        .filter-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--text-color);
+        }
+        
+        .filter-select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: var(--card-bg);
+            font-size: 16px;
+            color: var(--text-color);
+            transition: border-color 0.3s;
+        }
+        
+        .dark-mode .filter-select {
+            border-color: #555;
+            background-color: #2a2a2a;
+        }
+        
+        .filter-select:focus {
+            border-color: var(--light-blue);
+            outline: none;
+        }
+        /* KPI Cards */
+        
+        .kpi-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+        
+        .kpi-card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+            text-align: center;
+            transition: transform 0.3s, box-shadow 0.3s ease;
+            color: var(--text-color);
+        }
+        
+        .dark-mode .kpi-card {
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        .kpi-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+        }
+        
+        .dark-mode .kpi-card:hover {
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+        }
+        
+        .kpi-title {
+            font-size: 16px;
+            color: var(--text-color-light);
+            margin-bottom: 10px;
+        }
+        
+        .kpi-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--primary-blue);
+            margin-bottom: 5px;
+        }
+        
+        .kpi-change {
+            font-size: 14px;
+            font-weight: 600;
+        }
+        
+        .positive {
+            color: var(--accent-green);
+        }
+        
+        .negative {
+            color: var(--accent-red);
+        }
+        /* Tables Section */
+        
+        .tables-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 25px;
+            margin-bottom: 25px;
+        }
+        
+        .table-container {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+            overflow: hidden;
+            color: var(--text-color);
+            transition: all 0.3s ease;
+        }
+        
+        .dark-mode .table-container {
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        .table-container h3 {
+            color: var(--primary-blue);
+            margin-bottom: 15px;
+            font-size: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--card-border);
+        }
+        
+        .table-wrapper {
+            max-height: 400px;
+            overflow-y: auto;
+            border-radius: 8px;
+            border: 1px solid var(--card-border);
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        thead {
+            background-color: var(--primary-blue);
+            color: white;
+            position: sticky;
+            top: 0;
+        }
+        
+        th {
+            padding: 15px 12px;
+            text-align: left;
+            font-weight: 600;
+        }
+        
+        td {
+            padding: 12px;
+            border-bottom: 1px solid var(--card-border);
+            color: var(--text-color);
+        }
+        
+        tbody tr:hover {
+            background-color: var(--hover-color);
+        }
+        /* Charts Section */
+        
+        .charts-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 25px;
+            margin-bottom: 25px;
+        }
+        
+        .chart-container {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+            color: var(--text-color);
+            transition: all 0.3s ease;
+        }
+        
+        .dark-mode .chart-container {
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        .chart-container h3 {
+            color: var(--primary-blue);
+            margin-bottom: 15px;
+            font-size: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--card-border);
+        }
+        
+        .chart-wrapper {
+            position: relative;
+            height: 300px;
+        }
+        /* Footer */
+        
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding: 20px;
+            color: var(--text-color-light);
+            font-size: 14px;
+            border-top: 1px solid var(--card-border);
+        }
+        /* Responsive */
+        
+        @media (max-width: 1100px) {
+            .tables-section,
+            .charts-section {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .filters {
+                flex-direction: column;
+            }
+            .kpi-section {
+                grid-template-columns: 1fr;
+            }
+            .header h1 {
+                font-size: 26px;
+            }
+            .theme-toggle-container {
+                position: relative;
+                top: 0;
+                right: 0;
+                margin-bottom: 15px;
+                text-align: right;
+            }
+            .theme-toggle {
+                display: inline-flex;
+            }
+        }
+        /* Loading indicator */
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 30px;
+            color: var(--primary-blue);
+        }
+        
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-radius: 50%;
+            border-top: 4px solid var(--primary-blue);
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+        
+        .hidden {
+            display: none;
+        }
+        /* Table cell formatting */
+        
+        .currency {
+            font-family: 'Courier New', monospace;
+        }
+        
+        .percentage {
+            font-weight: 600;
+        }
+        
+        .good {
+            color: var(--accent-green);
+        }
+        
+        .warning {
+            color: var(--accent-orange);
+        }
+        
+        .poor {
+            color: var(--accent-red);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="dashboard-container">
+        <div class="header">
+            <div class="theme-toggle-container">
+                <button id="theme-toggle" class="theme-toggle">
+                    <span class="icon">🌙</span>
+                    <span class="text">Dark Mode</span>
+                </button>
+            </div>
+            <h1>😍BusBuddy Performance Dashboard</h1>
+            <p>2026 Quarterly Targets vs Achieved</p>
+            <div class="filter-summary">
+                <span id="owner-filter-summary">All Owners</span> |
+                <span id="product-filter-summary">All Products</span> |
+                <span id="quarter-filter-summary">All Quarters</span>
+            </div>
+        </div>
+
+        <div class="upload-section">
+            <h3>Upload Excel Data</h3>
+            <div class="file-upload">
+                <input type="file" id="excel-file" class="file-input" accept=".xlsx,.xls,.csv">
+                <button id="upload-btn" class="upload-btn">Upload & Process</button>
+                <button id="sample-data-btn" class="sample-data-btn">Load Sample Data</button>
+            </div>
+            <p>Upload an Excel file with "Revenue" and "Acquisition" sheets in the same format.</p>
+            <div id="upload-status" class="upload-status"></div>
+        </div>
+
+        <div class="loading" id="loading-indicator">
+            <div class="spinner"></div>
+            <p>Processing data and generating visualizations...</p>
+        </div>
+
+        <div id="dashboard-content" class="hidden">
+            <div class="filters-section">
+                <h3>Filters</h3>
+                <div class="filters">
+                    <div class="filter-group">
+                        <label for="owner-filter">Owner</label>
+                        <select id="owner-filter" class="filter-select">
+                            <option value="all">All Owners</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="product-filter">Product</label>
+                        <select id="product-filter" class="filter-select">
+                            <option value="all">All Products</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="quarter-filter">Quarter</label>
+                        <select id="quarter-filter" class="filter-select">
+                            <option value="all">All Quarters</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- UPDATED KPI SECTION WITH NET REVENUE -->
+            <div class="kpi-section">
+                <div class="kpi-card">
+                    <div class="kpi-title">Gross Revenue</div>
+                    <div class="kpi-value" id="gross-revenue">KES0</div>
+                    <div class="kpi-change positive" id="gross-revenue-change">+0% vs Target</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-title">Net Revenue</div>
+                    <div class="kpi-value" id="net-revenue">KES0</div>
+                    <div class="kpi-change positive" id="net-revenue-change">+0% vs Target</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-title">Gross Adds</div>
+                    <div class="kpi-value" id="total-gross-adds">0</div>
+                    <div class="kpi-change positive" id="gross-adds-change">+0% vs Target</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-title">Net Adds</div>
+                    <div class="kpi-value" id="total-net-adds">0</div>
+                    <div class="kpi-change negative" id="net-adds-change">0% vs Target</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-title">Free Trials</div>
+                    <div class="kpi-value" id="total-free-trials">0</div>
+                    <div class="kpi-change positive" id="free-trials-change">+0% vs Target</div>
+                </div>
+            </div>
+
+            <div class="tables-section">
+                <div class="table-container">
+                    <h3>Revenue Performance</h3>
+                    <div class="table-wrapper">
+                        <table id="revenue-table">
+                            <thead>
+                                <tr>
+                                    <th>Quarter</th>
+                                    <th>Owner</th>
+                                    <th>Product</th>
+                                    <th>Metric</th>
+                                    <th>Target</th>
+                                    <th>Achieved</th>
+                                    <th>% of Target</th>
+                                    <th>Cumulative Performance (YTD)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Revenue data will be populated here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <h3>Acquisition Performance</h3>
+                    <div class="table-wrapper">
+                        <table id="acquisition-table">
+                            <thead>
+                                <tr>
+                                    <th>Quarter</th>
+                                    <th>Owner</th>
+                                    <th>Product</th>
+                                    <th>Metric</th>
+                                    <th>Target</th>
+                                    <th>Achieved</th>
+                                    <th>% of Target</th>
+                                    <th>Cumulative Performance (YTD)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Acquisition data will be populated here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="charts-section">
+                <div class="chart-container">
+                    <h3>Revenue Trends</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="revenue-trends-chart"></canvas>
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <h3>Acquisition Trends</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="acquisition-trends-chart"></canvas>
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <h3>Performance by Owner</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="owner-performance-chart"></canvas>
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <h3>Performance by Product</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="product-performance-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>BusBuddy Performance Dashboard &copy; 2025 | Data last updated: <span id="update-date">-</span></p>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let revenueData = [];
+        let acquisitionData = [];
+        let filteredRevenueData = [];
+        let filteredAcquisitionData = [];
+        let owners = [];
+        let products = [];
+        let quarters = [];
+
+        // Chart instances
+        let revenueTrendsChart = null;
+        let acquisitionTrendsChart = null;
+        let ownerPerformanceChart = null;
+        let productPerformanceChart = null;
+
+        // DOM elements
+        const excelFileInput = document.getElementById('excel-file');
+        const uploadBtn = document.getElementById('upload-btn');
+        const sampleDataBtn = document.getElementById('sample-data-btn');
+        const loadingIndicator = document.getElementById('loading-indicator');
+        const dashboardContent = document.getElementById('dashboard-content');
+        const ownerFilter = document.getElementById('owner-filter');
+        const productFilter = document.getElementById('product-filter');
+        const quarterFilter = document.getElementById('quarter-filter');
+        const themeToggle = document.getElementById('theme-toggle');
+        const themeIcon = themeToggle.querySelector('.icon');
+        const themeText = themeToggle.querySelector('.text');
+        const uploadStatus = document.getElementById('upload-status');
+
+        // UPDATED KPI elements - Added Net Revenue
+        const grossRevenueEl = document.getElementById('gross-revenue');
+        const grossRevenueChangeEl = document.getElementById('gross-revenue-change');
+        const netRevenueEl = document.getElementById('net-revenue');
+        const netRevenueChangeEl = document.getElementById('net-revenue-change');
+        const totalGrossAddsEl = document.getElementById('total-gross-adds');
+        const grossAddsChangeEl = document.getElementById('gross-adds-change');
+        const totalNetAddsEl = document.getElementById('total-net-adds');
+        const netAddsChangeEl = document.getElementById('net-adds-change');
+        const totalFreeTrialsEl = document.getElementById('total-free-trials');
+        const freeTrialsChangeEl = document.getElementById('free-trials-change');
+
+        // Filter summary elements
+        const ownerFilterSummary = document.getElementById('owner-filter-summary');
+        const productFilterSummary = document.getElementById('product-filter-summary');
+        const quarterFilterSummary = document.getElementById('quarter-filter-summary');
+        const updateDateEl = document.getElementById('update-date');
+
+        // Theme state
+        let isDarkMode = false;
+
+        // Event listeners
+        uploadBtn.addEventListener('click', handleFileUpload);
+        sampleDataBtn.addEventListener('click', loadSampleData);
+        ownerFilter.addEventListener('change', applyFilters);
+        productFilter.addEventListener('change', applyFilters);
+        quarterFilter.addEventListener('change', applyFilters);
+        themeToggle.addEventListener('click', toggleTheme);
+
+        // Initialize with sample data and check for saved theme
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check for saved theme preference
+            const savedTheme = localStorage.getItem('dashboard-theme');
+            if (savedTheme === 'dark') {
+                enableDarkMode();
+            }
+
+            // Check if there's a file already selected
+            excelFileInput.addEventListener('change', function() {
+                if (this.files.length > 0) {
+                    uploadBtn.textContent = 'Upload & Process: ' + this.files[0].name;
+                }
+            });
+
+            loadSampleData();
+        });
+
+        // Toggle theme function
+        function toggleTheme() {
+            if (isDarkMode) {
+                disableDarkMode();
+            } else {
+                enableDarkMode();
+            }
+        }
+
+        // Enable dark mode
+        function enableDarkMode() {
+            document.body.classList.add('dark-mode');
+            themeIcon.textContent = '☀️';
+            themeText.textContent = 'Light Mode';
+            isDarkMode = true;
+            localStorage.setItem('dashboard-theme', 'dark');
+
+            // Update charts if they exist
+            updateChartThemes();
+        }
+
+        // Disable dark mode
+        function disableDarkMode() {
+            document.body.classList.remove('dark-mode');
+            themeIcon.textContent = '🌙';
+            themeText.textContent = 'Dark Mode';
+            isDarkMode = false;
+            localStorage.setItem('dashboard-theme', 'light');
+
+            // Update charts if they exist
+            updateChartThemes();
+        }
+
+        // Update chart themes
+        function updateChartThemes() {
+            const gridColor = isDarkMode ? '#333' : '#e0e0e0';
+            const textColor = isDarkMode ? '#e0e0e0' : '#333';
+            const tickColor = isDarkMode ? '#b0b0b0' : '#666';
+
+            // Update existing charts
+            const charts = [revenueTrendsChart, acquisitionTrendsChart, ownerPerformanceChart, productPerformanceChart];
+            charts.forEach(chart => {
+                if (chart) {
+                    chart.options.scales.x.grid.color = gridColor;
+                    chart.options.scales.y.grid.color = gridColor;
+                    chart.options.scales.x.ticks.color = tickColor;
+                    chart.options.scales.y.ticks.color = tickColor;
+                    chart.options.scales.x.title.color = textColor;
+                    chart.options.scales.y.title.color = textColor;
+                    chart.options.plugins.legend.labels.color = textColor;
+                    chart.update();
+                }
+            });
+        }
+
+        // Handle file upload
+        async function handleFileUpload() {
+            const file = excelFileInput.files[0];
+            if (!file) {
+                showUploadStatus('Please select an Excel file first.', 'error');
+                return;
+            }
+
+            showLoading();
+            showUploadStatus('Processing file...', 'info');
+
+            try {
+                if (file.name.endsWith('.csv')) {
+                    // Handle CSV file
+                    const text = await file.text();
+                    await parseCSVData(text);
+                } else {
+                    // Handle Excel file
+                    await parseExcelData(file);
+                }
+
+                if (revenueData.length === 0 && acquisitionData.length === 0) {
+                    throw new Error('No valid data found in the file. Please check the file format.');
+                }
+
+                processData();
+                updateDashboard();
+
+                // Update the last updated date
+                const now = new Date();
+                updateDateEl.textContent = now.toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+
+                showUploadStatus('File uploaded and processed successfully! Dashboard updated.', 'success');
+            } catch (error) {
+                console.error('Error processing file:', error);
+                showUploadStatus('Error: ' + error.message, 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // Show upload status message
+        function showUploadStatus(message, type) {
+            uploadStatus.textContent = message;
+            uploadStatus.className = 'upload-status ' + type;
+            uploadStatus.style.display = 'block';
+
+            // Auto-hide success messages after 5 seconds
+            if (type === 'success') {
+                setTimeout(() => {
+                    uploadStatus.style.display = 'none';
+                }, 5000);
+            }
+        }
+
+        // Parse CSV data
+        async function parseCSVData(csvText) {
+            return new Promise((resolve, reject) => {
+                try {
+                    const parsedData = Papa.parse(csvText, {
+                        header: true,
+                        skipEmptyLines: true
+                    });
+
+                    console.log('Parsed CSV data:', parsedData.data);
+
+                    // For CSV, we need to determine which sheet it is
+                    // For simplicity, we'll assume it contains both revenue and acquisition data
+                    // and separate them based on metric names
+                    revenueData = [];
+                    acquisitionData = [];
+
+                    const revenueMetrics = ['Net Revenue', 'Gross Revenue'];
+                    const acquisitionMetrics = ['Gross Adds', 'Net Adds', 'Free Trial'];
+
+                    parsedData.data.forEach(row => {
+                        const metric = row.Metric || row.metric;
+                        const quarter = row.Quarter || row.quarter;
+                        const owner = row.Owner || row.owner;
+                        const product = row.Product || row.product;
+                        const target = parseFloat(row.Target || row.target || 0);
+                        const achieved = parseFloat(row.Achieved || row.achieved || 0);
+                        const percentOfTarget = parseFloat(row['% of Target'] || row.percentOfTarget || 0);
+
+                        const dataItem = {
+                            quarter: quarter || '',
+                            owner: owner || '',
+                            product: product || '',
+                            metric: metric || '',
+                            target: isNaN(target) ? 0 : target,
+                            achieved: isNaN(achieved) ? 0 : achieved,
+                            percentOfTarget: isNaN(percentOfTarget) ? 0 : percentOfTarget
+                        };
+
+                        if (revenueMetrics.includes(metric)) {
+                            revenueData.push(dataItem);
+                        } else if (acquisitionMetrics.includes(metric)) {
+                            acquisitionData.push(dataItem);
+                        }
+                    });
+
+                    console.log('Revenue data from CSV:', revenueData.length, 'rows');
+                    console.log('Acquisition data from CSV:', acquisitionData.length, 'rows');
+
+                    resolve();
+                } catch (error) {
+                    reject(new Error('Failed to parse CSV file: ' + error.message));
+                }
+            });
+        }
+
+        // Parse Excel data using ExcelJS
+        async function parseExcelData(file) {
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                const workbook = new ExcelJS.Workbook();
+                await workbook.xlsx.load(arrayBuffer);
+
+                revenueData = [];
+                acquisitionData = [];
+
+                // Parse Revenue sheet
+                const revenueSheet = workbook.getWorksheet('Revenue');
+                if (revenueSheet) {
+                    console.log('Found Revenue sheet with', revenueSheet.rowCount, 'rows');
+
+                    const rows = revenueSheet.getSheetValues();
+                    // Skip header row (row 1)
+                    for (let i = 2; i < rows.length; i++) {
+                        const row = rows[i];
+                        if (row && row.length >= 7) {
+                            // IMPORTANT: Calculate % of Target dynamically instead of reading from file
+                            const target = parseFloat(row[5]) || 0;
+                            const achieved = parseFloat(row[6]) || 0;
+                            const percentOfTarget = target > 0 ? (achieved / target) * 100 : 0;
+
+                            const dataItem = {
+                                quarter: String(row[1] || '').trim(),
+                                owner: String(row[2] || '').trim(),
+                                product: String(row[3] || '').trim(),
+                                metric: String(row[4] || '').trim(),
+                                target: target,
+                                achieved: achieved,
+                                percentOfTarget: percentOfTarget
+                            };
+
+                            // Only add if we have valid data
+                            if (dataItem.quarter || dataItem.owner || dataItem.product) {
+                                revenueData.push(dataItem);
+                            }
+                        }
+                    }
+                } else {
+                    console.warn('No "Revenue" sheet found in the Excel file');
+                }
+
+                // Parse Acquisition sheet
+                const acquisitionSheet = workbook.getWorksheet('Acquisition');
+                if (acquisitionSheet) {
+                    console.log('Found Acquisition sheet with', acquisitionSheet.rowCount, 'rows');
+
+                    const rows = acquisitionSheet.getSheetValues();
+                    // Skip header row (row 1)
+                    for (let i = 2; i < rows.length; i++) {
+                        const row = rows[i];
+                        if (row && row.length >= 7) {
+                            // IMPORTANT: Calculate % of Target dynamically instead of reading from file
+                            const target = parseFloat(row[5]) || 0;
+                            const achieved = parseFloat(row[6]) || 0;
+                            const percentOfTarget = target > 0 ? (achieved / target) * 100 : 0;
+
+                            const dataItem = {
+                                quarter: String(row[1] || '').trim(),
+                                owner: String(row[2] || '').trim(),
+                                product: String(row[3] || '').trim(),
+                                metric: String(row[4] || '').trim(),
+                                target: target,
+                                achieved: achieved,
+                                percentOfTarget: percentOfTarget
+                            };
+
+                            // Only add if we have valid data
+                            if (dataItem.quarter || dataItem.owner || dataItem.product) {
+                                acquisitionData.push(dataItem);
+                            }
+                        }
+                    }
+                } else {
+                    console.warn('No "Acquisition" sheet found in the Excel file');
+                }
+
+                console.log('Loaded Revenue data:', revenueData.length, 'rows');
+                console.log('Loaded Acquisition data:', acquisitionData.length, 'rows');
+
+                // If no data was loaded from sheets, try to load from first sheet
+                if (revenueData.length === 0 && acquisitionData.length === 0) {
+                    console.log('Trying to load data from first sheet...');
+                    const firstSheet = workbook.worksheets[0];
+                    if (firstSheet) {
+                        const rows = firstSheet.getSheetValues();
+                        // Try to auto-detect the sheet type
+                        const headerRow = rows[1] || [];
+                        const headerText = headerRow.map(cell => String(cell || '').toLowerCase()).join(' ');
+
+                        if (headerText.includes('revenue')) {
+                            // Parse as revenue data
+                            for (let i = 2; i < rows.length; i++) {
+                                const row = rows[i];
+                                if (row && row.length >= 7) {
+                                    const target = parseFloat(row[5]) || 0;
+                                    const achieved = parseFloat(row[6]) || 0;
+                                    const percentOfTarget = target > 0 ? (achieved / target) * 100 : 0;
+
+                                    revenueData.push({
+                                        quarter: String(row[1] || '').trim(),
+                                        owner: String(row[2] || '').trim(),
+                                        product: String(row[3] || '').trim(),
+                                        metric: String(row[4] || '').trim(),
+                                        target: target,
+                                        achieved: achieved,
+                                        percentOfTarget: percentOfTarget
+                                    });
+                                }
+                            }
+                        } else if (headerText.includes('adds') || headerText.includes('acquisition')) {
+                            // Parse as acquisition data
+                            for (let i = 2; i < rows.length; i++) {
+                                const row = rows[i];
+                                if (row && row.length >= 7) {
+                                    const target = parseFloat(row[5]) || 0;
+                                    const achieved = parseFloat(row[6]) || 0;
+                                    const percentOfTarget = target > 0 ? (achieved / target) * 100 : 0;
+
+                                    acquisitionData.push({
+                                        quarter: String(row[1] || '').trim(),
+                                        owner: String(row[2] || '').trim(),
+                                        product: String(row[3] || '').trim(),
+                                        metric: String(row[4] || '').trim(),
+                                        target: target,
+                                        achieved: achieved,
+                                        percentOfTarget: percentOfTarget
+                                    });
+                                }
+                            }
+                        }
+                    }
+                }
+
+                return true;
+            } catch (error) {
+                console.error('Excel parsing error:', error);
+                throw new Error('Failed to parse Excel file. Make sure it has "Revenue" and "Acquisition" sheets with the correct format.');
+            }
+        }
+
+        // Load sample data (from the provided example)
+        function loadSampleData() {
+            showLoading();
+            showUploadStatus('Loading sample data...', 'info');
+
+            // Sample revenue data (from instructions)
+            revenueData = [{
+                quarter: 'Q1',
+                owner: 'Peter',
+                product: 'SaaS',
+                metric: 'Net Revenue',
+                target: 0,
+                achieved: 0,
+                percentOfTarget: 0
+            }, {
+                quarter: 'Q1',
+                owner: 'Peter',
+                product: 'TaaS',
+                metric: 'Gross Revenue',
+                target: 0,
+                achieved: 0,
+                percentOfTarget: 0
+            }, {
+                quarter: 'Q1',
+                owner: 'Peter',
+                product: 'TaaS',
+                metric: 'Net Revenue',
+                target: 0,
+                achieved: 0,
+                percentOfTarget: 0
+            }, {
+                quarter: 'Q2',
+                owner: 'Peter',
+                product: 'SaaS',
+                metric: 'Net Revenue',
+                target: 0,
+                achieved: 0,
+                percentOfTarget: 0
+            }, {
+                quarter: 'Q2',
+                owner: 'Peter',
+                product: 'TaaS',
+                metric: 'Gross Revenue',
+                target: 0,
+                achieved: 0,
+                percentOfTarget: 0
+            }, {
+                quarter: 'Q2',
+                owner: 'Peter',
+                product: 'TaaS',
+                metric: 'Net Revenue',
+                target: 0,
+                achieved: 0,
+                percentOfTarget: 0
+            }, {
+                quarter: 'Q3',
+                owner: 'Peter',
+                product: 'SaaS',
+                metric: 'Net Revenue',
+                target: 500000,
+                achieved: 200000,
+                percentOfTarget: 40
+            }, {
+                quarter: 'Q3',
+                owner: 'Peter',
+                product: 'TaaS',
+                metric: 'Gross Revenue',
+                target: 2500000,
+                achieved: 800000,
+                percentOfTarget: 32
+            }, {
+                quarter: 'Q3',
+                owner: 'Peter',
+                product: 'TaaS',
+                metric: 'Net Revenue',
+                target: 1000000,
+                achieved: 400000,
+                percentOfTarget: 40
+            }, {
+                quarter: 'Q4',
+                owner: 'Peter',
+                product: 'SaaS',
+                metric: 'Net Revenue',
+                target: 500000,
+                achieved: 0,
+                percentOfTarget: 0
+            }, {
+                quarter: 'Q4',
+                owner: 'Peter',
+                product: 'TaaS',
+                metric: 'Gross Revenue',
+                target: 2500000,
+                achieved: 0,
+                percentOfTarget: 0
+            }, {
+                quarter: 'Q4',
+                owner: 'Peter',
+                product: 'TaaS',
+                metric: 'Net Revenue',
+                target: 625000,
+                achieved: 0,
+                percentOfTarget: 0
+            }, {
+                quarter: 'Cumulative Performance (YTD)',
+                owner: 'Peter',
+                product: 'SaaS',
+                metric: 'Net Revenue',
+                target: 1000000,
+                achieved: 200000,
+                percentOfTarget: 20
+            }, {
+                quarter: 'Cumulative Performance (YTD)',
+                owner: 'Peter',
+                product: 'TaaS',
+                metric: 'Gross Revenue',
+                target: 5000000,
+                achieved: 800000,
+                percentOfTarget: 16
+            }, {
+                quarter: 'Cumulative Performance (YTD)',
+                owner: 'Peter',
+                product: 'TaaS',
+                metric: 'Net Revenue',
+                target: 1625000,
+                achieved: 400000,
+                percentOfTarget: 24.62
+            }, {
+                quarter: 'Q1',
+                owner: 'Mercy',
+                product: 'SaaS',
+                metric: 'Net Revenue',
+                target: 0,
+                achieved: 0,
+                percentOfTarget: 0
+            }, {
+                quarter: 'Q1',
+                owner: 'Mercy',
+                product: 'TaaS',
+                metric: 'Gross Revenue',
+                target: 0,
+                achieved: 0,
+                percentOfTarget: 0
+            }, {
+                quarter: 'Q1',
+                owner: 'Mercy',
+                product: 'TaaS',
+                metric: 'Net Revenue',
+                target: 0,
+                achieved: 0,
+                percentOfTarget: 0
+            }, {
+                quarter: 'Q2',
+                owner: 'Mercy',
+                product: 'SaaS',
+                metric: 'Net Revenue',
+                target: 0,
+                achieved: 0,
+                percentOfTarget: 0
+            }, {
+                quarter: 'Q2',
+                owner: 'Mercy',
+                product: 'TaaS',
+                metric: 'Gross Revenue',
+                target: 0,
+                achieved: 0,
+                percentOfTarget: 0
+            }, {
+                quarter: 'Q2',
+                owner: 'Mercy',
+                product: 'TaaS',
+                metric: 'Net Revenue',
+                target: 0,
+                achieved: 0,
+                percentOfTarget: 0
+            }, {
+                quarter: 'Q3',
+                owner: 'Mercy',
+                product: 'SaaS',
+                metric: 'Net Revenue',
+                target: 500000,
+                achieved: 400000,
+                percentOfTarget: 80
+            }, {
+                quarter: 'Q3',
+                owner: 'Mercy',
+                product: 'TaaS',
+                metric: 'Gross Revenue',
+                target: 2500000,
+                achieved: 800000,
+                percentOfTarget: 32
+            }, {
+                quarter: 'Q3',
+                owner: 'Mercy',
+                product: 'TaaS',
+                metric: 'Net Revenue',
+                target: 1000000,
+                achieved: 600000,
+                percentOfTarget: 60
+            }, {
+                quarter: 'Q4',
+                owner: 'Mercy',
+                product: 'SaaS',
+                metric: 'Net Revenue',
+                target: 500000,
+                achieved: 0,
+                percentOfTarget: 0
+            }, {
+                quarter: 'Q4',
+                owner: 'Mercy',
+                product: 'TaaS',
+                metric: 'Gross Revenue',
+                target: 2500000,
+                achieved: 230000,
+                percentOfTarget: 9.2
+            }, {
+                quarter: 'Q4',
+                owner: 'Mercy',
+                product: 'TaaS',
+                metric: 'Net Revenue',
+                target: 625000,
+                achieved: 70000,
+                percentOfTarget: 11.2
+            }, {
+                quarter: 'Cumulative Performance (YTD)',
+                owner: 'Mercy',
+                product: 'SaaS',
+                metric: 'Net Revenue',
+                target: 1000000,
+                achieved: 400000,
+                percentOfTarget: 40
+            }, {
+                quarter: 'Cumulative Performance (YTD)',
+                owner: 'Mercy',
+                product: 'TaaS',
+                metric: 'Gross Revenue',
+                target: 5000000,
+                achieved: 1030000,
+                percentOfTarget: 20.6
+            }, {
+                quarter: 'Cumulative Performance (YTD)',
+                owner: 'Mercy',
+                product: 'TaaS',
+                metric: 'Net Revenue',
+                target: 1625000,
+                achieved: 670000,
+                percentOfTarget: 41.23
+            }];
+
+            // Sample acquisition data (from instructions)
+            acquisitionData = [{
+                quarter: 'Q1',
+                owner: 'Peter',
+                product: 'SaaS',
+                metric: 'Gross Adds',
+                target: 0,
+                achieved: 0,
+                percentOfTarget: 0
+            }, {
+                quarter: 'Q1',
+                owner: 'Peter',
+                product: 'SaaS',
+                metric: 'Net Adds',
+                target: 0,
+                achieved: 0,
+                percentOfTarget: 0
+            }, {
+                quarter: 'Q1',
+                owner: 'Peter',
+                product: 'SaaS',
+                metric: 'Free Trial',
+                target: 0,
+                achieved: 0,
+                percentOfTarget: 0
+            }, {
+                quarter: 'Q1',
+                owner: 'Peter',
+                product: 'TaaS',
+                metric: 'Gross Adds',
+                target: 0,
+                achieved: 0,
+                percentOfTarget: 0
+            }, {
+                quarter: 'Q1',
+                owner: 'Peter',
+                product: 'TaaS',
+                metric: 'Net Adds',
+                target: 0,
+                achieved: 0,
+                percentOfTarget: 0
+            }, {
+                quarter: 'Q2',
+                owner: 'Peter',
+                product: 'SaaS',
+                metric: 'Gross Adds',
+                target: 0,
+                achieved: 0,
+                percentOfTarget: 0
+            }, {
+                quarter: 'Q2',
+                owner: 'Peter',
+                product: 'SaaS',
+                metric: 'Net Adds',
+                target: 0,
+                achieved: 0,
+                percentOfTarget: 0
+            }, {
+                quarter: 'Q2',
+                owner: 'Peter',
+                product: 'SaaS',
+                metric: 'Free Trial',
+                target: 0,
+                achieved: 0,
+                percentOfTarget: 0
+            }, {
+                quarter: 'Q2',
+                owner: 'Peter',
+                product: 'TaaS',
+                metric: 'Gross Adds',
+                target: 0,
+                achieved: 0,
+                percentOfTarget: 0
+            }, {
+                quarter: 'Q2',
+                owner: 'Peter',
+                product: 'TaaS',
+                metric: 'Net Adds',
+                target: 0,
+                achieved: 0,
+                percentOfTarget: 0
+            }, {
+                quarter: 'Q3',
+                owner: 'Peter',
+                product: 'SaaS',
+                metric: 'Gross Adds',
+                target: 150,
+                achieved: 145,
+                percentOfTarget: 96.67
+            }, {
+                quarter: 'Q3',
+                owner: 'Peter',
+                product: 'SaaS',
+                metric: 'Net Adds',
+                target: 15,
+                achieved: 0,
+                percentOfTarget: 0
+            }, {
+                quarter: 'Q3',
+                owner: 'Peter',
+                product: 'SaaS',
+                metric: 'Free Trial',
+                target: 6,
+                achieved: 2,
+                percentOfTarget: 33.33
+            }, {
+                quarter: 'Q3',
+                owner: 'Peter',
+                product: 'TaaS',
+                metric: 'Gross Adds',
+                target: 0,
+                achieved: 0,
+                percentOfTarget: 0
+            }, {
+                quarter: 'Q3',
+                owner: 'Peter',
+                product: 'TaaS',
+                metric: 'Net Adds',
+                target: 0,
+                achieved: 0,
+                percentOfTarget: 0
+            }, {
+                quarter: 'Q4',
+                owner: 'Peter',
+                product: 'SaaS',
+                metric: 'Gross Adds',
+                target: 150,
+                achieved: 0,
+                percentOfTarget: 0
+            }, {
+                quarter: 'Q4',
+                owner: 'Peter',
+                product: 'SaaS',
+                metric: 'Net Adds',
+                target: 12,
+                achieved: 0,
+                percentOfTarget: 0
+            }, {
+                quarter: 'Q4',
+                owner: 'Peter',
+                product: 'SaaS',
+                metric: 'Free Trial',
+                target: 4,
+                achieved: 0,
+                percentOfTarget: 0
+            }, {
+                quarter: 'Q4',
+                owner: 'Peter',
+                product: 'TaaS',
+                metric: 'Gross Adds',
+                target: 300,
+                achieved: 0,
+                percentOfTarget: 0
+            }, {
+                quarter: 'Q4',
+                owner: 'Peter',
+                product: 'TaaS',
+                metric: 'Net Adds',
+                target: 12,
+                achieved: 0,
+                percentOfTarget: 0
+            }, {
+                quarter: 'Cumulative Performance (YTD)',
+                owner: 'Peter',
+                product: 'SaaS',
+                metric: 'Gross Adds',
+                target: 300,
+                achieved: 145,
+                percentOfTarget: 48.33
+            }, {
+                quarter: 'Cumulative Performance (YTD)',
+                owner: 'Peter',
+                product: 'SaaS',
+                metric: 'Net Adds',
+                target: 27,
+                achieved: 0,
+                percentOfTarget: 0
+            }, {
+                quarter: 'Cumulative Performance (YTD)',
+                owner: 'Peter',
+                product: 'SaaS',
+                metric: 'Free Trial',
+                target: 10,
+                achieved: 2,
+                percentOfTarget: 20
+            }, {
+                quarter: 'Cumulative Performance (YTD)',
+                owner: 'Peter',
+                product: 'TaaS',
+                metric: 'Gross Adds',
+                target: 300,
+                achieved: 0,
+                percentOfTarget: 0
+            }, {
+                quarter: 'Cumulative Performance (YTD)',
+                owner: 'Peter',
+                product: 'TaaS',
+                metric: 'Net Adds',
+                target: 12,
+                achieved: 0,
+                percentOfTarget: 0
+            }, {
+                quarter: 'Q1',
+                owner: 'Mercy',
+                product: 'SaaS',
+                metric: 'Gross Adds',
+                target: 0,
+                achieved: 0,
+                percentOfTarget: 0
+            }, {
+                quarter: 'Q1',
+                owner: 'Mercy',
+                product: 'SaaS',
+                metric: 'Net Adds',
+                target: 0,
+                achieved: 0,
+                percentOfTarget: 0
+            }, {
+                quarter: 'Q1',
+                owner: 'Mercy',
+                product: 'SaaS',
+                metric: 'Free Trial',
+                target: 0,
+                achieved: 0,
+                percentOfTarget: 0
+            }, {
+                quarter: 'Q1',
+                owner: 'Mercy',
+                product: 'TaaS',
+                metric: 'Gross Adds',
+                target: 0,
+                achieved: 0,
+                percentOfTarget: 0
+            }, {
+                quarter: 'Q1',
+                owner: 'Mercy',
+                product: 'TaaS',
+                metric: 'Net Adds',
+                target: 0,
+                achieved: 0,
+                percentOfTarget: 0
+            }, {
+                quarter: 'Q2',
+                owner: 'Mercy',
+                product: 'SaaS',
+                metric: 'Gross Adds',
+                target: 150,
+                achieved: 186,
+                percentOfTarget: 124
+            }, {
+                quarter: 'Q2',
+                owner: 'Mercy',
+                product: 'SaaS',
+                metric: 'Net Adds',
+                target: 15,
+                achieved: 1,
+                percentOfTarget: 6.67
+            }, {
+                quarter: 'Q2',
+                owner: 'Mercy',
+                product: 'SaaS',
+                metric: 'Free Trial',
+                target: 0,
+                achieved: 0,
+                percentOfTarget: 0
+            }, {
+                quarter: 'Q2',
+                owner: 'Mercy',
+                product: 'TaaS',
+                metric: 'Gross Adds',
+                target: 0,
+                achieved: 0,
+                percentOfTarget: 0
+            }, {
+                quarter: 'Q2',
+                owner: 'Mercy',
+                product: 'TaaS',
+                metric: 'Net Adds',
+                target: 0,
+                achieved: 0,
+                percentOfTarget: 0
+            }, {
+                quarter: 'Q3',
+                owner: 'Mercy',
+                product: 'SaaS',
+                metric: 'Gross Adds',
+                target: 0,
+                achieved: 0,
+                percentOfTarget: 0
+            }, {
+                quarter: 'Q3',
+                owner: 'Mercy',
+                product: 'SaaS',
+                metric: 'Net Adds',
+                target: 0,
+                achieved: 0,
+                percentOfTarget: 0
+            }, {
+                quarter: 'Q3',
+                owner: 'Mercy',
+                product: 'SaaS',
+                metric: 'Free Trial',
+                target: 6,
+                achieved: 4,
+                percentOfTarget: 66.67
+            }, {
+                quarter: 'Q3',
+                owner: 'Mercy',
+                product: 'TaaS',
+                metric: 'Gross Adds',
+                target: 0,
+                achieved: 0,
+                percentOfTarget: 0
+            }, {
+                quarter: 'Q3',
+                owner: 'Mercy',
+                product: 'TaaS',
+                metric: 'Net Adds',
+                target: 0,
+                achieved: 0,
+                percentOfTarget: 0
+            }, {
+                quarter: 'Q4',
+                owner: 'Mercy',
+                product: 'SaaS',
+                metric: 'Gross Adds',
+                target: 300,
+                achieved: 0,
+                percentOfTarget: 0
+            }, {
+                quarter: 'Q4',
+                owner: 'Mercy',
+                product: 'SaaS',
+                metric: 'Net Adds',
+                target: 12,
+                achieved: 0,
+                percentOfTarget: 0
+            }, {
+                quarter: 'Q4',
+                owner: 'Mercy',
+                product: 'SaaS',
+                metric: 'Free Trial',
+                target: 4,
+                achieved: 0,
+                percentOfTarget: 0
+            }, {
+                quarter: 'Q4',
+                owner: 'Mercy',
+                product: 'TaaS',
+                metric: 'Gross Adds',
+                target: 300,
+                achieved: 0,
+                percentOfTarget: 0
+            }, {
+                quarter: 'Q4',
+                owner: 'Mercy',
+                product: 'TaaS',
+                metric: 'Net Adds',
+                target: 12,
+                achieved: 0,
+                percentOfTarget: 0
+            }, {
+                quarter: 'Cumulative Performance (YTD)',
+                owner: 'Mercy',
+                product: 'SaaS',
+                metric: 'Gross Adds',
+                target: 450,
+                achieved: 186,
+                percentOfTarget: 41.33
+            }, {
+                quarter: 'Cumulative Performance (YTD)',
+                owner: 'Mercy',
+                product: 'SaaS',
+                metric: 'Net Adds',
+                target: 27,
+                achieved: 1,
+                percentOfTarget: 3.7
+            }, {
+                quarter: 'Cumulative Performance (YTD)',
+                owner: 'Mercy',
+                product: 'SaaS',
+                metric: 'Free Trial',
+                target: 10,
+                achieved: 4,
+                percentOfTarget: 40
+            }, {
+                quarter: 'Cumulative Performance (YTD)',
+                owner: 'Mercy',
+                product: 'TaaS',
+                metric: 'Gross Adds',
+                target: 300,
+                achieved: 0,
+                percentOfTarget: 0
+            }, {
+                quarter: 'Cumulative Performance (YTD)',
+                owner: 'Mercy',
+                product: 'TaaS',
+                metric: 'Net Adds',
+                target: 12,
+                achieved: 0,
+                percentOfTarget: 0
+            }];
+
+            processData();
+            updateDashboard();
+            hideLoading();
+            showUploadStatus('Sample data loaded successfully!', 'success');
+
+            // Update the last updated date
+            const now = new Date();
+            updateDateEl.textContent = now.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        // Process data and extract unique values for filters
+        function processData() {
+            // Extract unique owners, products, and quarters
+            owners = [];
+            products = [];
+            quarters = [];
+
+            // Helper function to add unique values to arrays
+            function addUnique(arr, value) {
+                if (value && arr.indexOf(value) === -1) {
+                    arr.push(value);
+                }
+            }
+
+            // Process all data
+            for (let i = 0; i < revenueData.length; i++) {
+                const item = revenueData[i];
+                if (item.owner && item.owner.indexOf('Cumulative') === -1) {
+                    addUnique(owners, item.owner);
+                }
+                if (item.product) {
+                    addUnique(products, item.product);
+                }
+                if (item.quarter && item.quarter.indexOf('Cumulative') === -1) {
+                    addUnique(quarters, item.quarter);
+                }
+            }
+
+            for (let i = 0; i < acquisitionData.length; i++) {
+                const item = acquisitionData[i];
+                if (item.owner && item.owner.indexOf('Cumulative') === -1) {
+                    addUnique(owners, item.owner);
+                }
+                if (item.product) {
+                    addUnique(products, item.product);
+                }
+                if (item.quarter && item.quarter.indexOf('Cumulative') === -1) {
+                    addUnique(quarters, item.quarter);
+                }
+            }
+
+            // Sort quarters in order
+            quarters.sort(function(a, b) {
+                const qOrder = {
+                    'Q1': 1,
+                    'Q2': 2,
+                    'Q3': 3,
+                    'Q4': 4
+                };
+                return qOrder[a] - qOrder[b];
+            });
+
+            // Populate filter dropdowns
+            populateFilterDropdowns();
+
+            // Apply initial filters
+            applyFilters();
+        }
+
+        // Populate filter dropdowns with unique values
+        function populateFilterDropdowns() {
+            // Owner filter
+            ownerFilter.innerHTML = '<option value="all">All Owners</option>';
+            for (let i = 0; i < owners.length; i++) {
+                ownerFilter.innerHTML += '<option value="' + owners[i] + '">' + owners[i] + '</option>';
+            }
+
+            // Product filter
+            productFilter.innerHTML = '<option value="all">All Products</option>';
+            for (let i = 0; i < products.length; i++) {
+                productFilter.innerHTML += '<option value="' + products[i] + '">' + products[i] + '</option>';
+            }
+
+            // Quarter filter
+            quarterFilter.innerHTML = '<option value="all">All Quarters</option>';
+            for (let i = 0; i < quarters.length; i++) {
+                quarterFilter.innerHTML += '<option value="' + quarters[i] + '">' + quarters[i] + '</option>';
+            }
+        }
+
+        // Apply filters to data
+        function applyFilters() {
+            const selectedOwner = ownerFilter.value;
+            const selectedProduct = productFilter.value;
+            const selectedQuarter = quarterFilter.value;
+
+            // Filter revenue data
+            filteredRevenueData = [];
+            for (let i = 0; i < revenueData.length; i++) {
+                const item = revenueData[i];
+                const ownerMatch = selectedOwner === 'all' || item.owner === selectedOwner;
+                const productMatch = selectedProduct === 'all' || item.product === selectedProduct;
+                const quarterMatch = selectedQuarter === 'all' || item.quarter === selectedQuarter;
+
+                if (ownerMatch && productMatch && quarterMatch) {
+                    filteredRevenueData.push(item);
+                }
+            }
+
+            // Filter acquisition data
+            filteredAcquisitionData = [];
+            for (let i = 0; i < acquisitionData.length; i++) {
+                const item = acquisitionData[i];
+                const ownerMatch = selectedOwner === 'all' || item.owner === selectedOwner;
+                const productMatch = selectedProduct === 'all' || item.product === selectedProduct;
+                const quarterMatch = selectedQuarter === 'all' || item.quarter === selectedQuarter;
+
+                if (ownerMatch && productMatch && quarterMatch) {
+                    filteredAcquisitionData.push(item);
+                }
+            }
+
+            // Update filter summaries
+            ownerFilterSummary.textContent = selectedOwner === 'all' ? 'All Owners' : selectedOwner;
+            productFilterSummary.textContent = selectedProduct === 'all' ? 'All Products' : selectedProduct;
+            quarterFilterSummary.textContent = selectedQuarter === 'all' ? 'All Quarters' : selectedQuarter;
+
+            updateDashboard();
+        }
+
+        // Update the entire dashboard with filtered data
+        function updateDashboard() {
+            updateKPIs();
+            updateTables();
+            updateCharts();
+        }
+
+        // UPDATED: Update KPI cards with Gross and Net Revenue
+        function updateKPIs() {
+            // Calculate gross revenue (sum of achieved gross revenue)
+            let grossRevenueAchieved = 0;
+            let grossRevenueTarget = 0;
+
+            // Calculate net revenue (sum of achieved net revenue)
+            let netRevenueAchieved = 0;
+            let netRevenueTarget = 0;
+
+            for (let i = 0; i < filteredRevenueData.length; i++) {
+                const item = filteredRevenueData[i];
+                if (item.metric === 'Gross Revenue') {
+                    grossRevenueAchieved += item.achieved;
+                    grossRevenueTarget += item.target;
+                } else if (item.metric === 'Net Revenue') {
+                    netRevenueAchieved += item.achieved;
+                    netRevenueTarget += item.target;
+                }
+            }
+
+            const grossRevenuePercent = grossRevenueTarget > 0 ? (grossRevenueAchieved / grossRevenueTarget) * 100 : 0;
+            const netRevenuePercent = netRevenueTarget > 0 ? (netRevenueAchieved / netRevenueTarget) * 100 : 0;
+
+            // Calculate acquisition metrics
+            let totalGrossAddsAchieved = 0;
+            let totalGrossAddsTarget = 0;
+            let totalNetAddsAchieved = 0;
+            let totalNetAddsTarget = 0;
+            let totalFreeTrialsAchieved = 0;
+            let totalFreeTrialsTarget = 0;
+
+            for (let i = 0; i < filteredAcquisitionData.length; i++) {
+                const item = filteredAcquisitionData[i];
+                if (item.metric === 'Gross Adds') {
+                    totalGrossAddsAchieved += item.achieved;
+                    totalGrossAddsTarget += item.target;
+                } else if (item.metric === 'Net Adds') {
+                    totalNetAddsAchieved += item.achieved;
+                    totalNetAddsTarget += item.target;
+                } else if (item.metric === 'Free Trial') {
+                    totalFreeTrialsAchieved += item.achieved;
+                    totalFreeTrialsTarget += item.target;
+                }
+            }
+
+            const grossAddsPercent = totalGrossAddsTarget > 0 ? (totalGrossAddsAchieved / totalGrossAddsTarget) * 100 : 0;
+            const netAddsPercent = totalNetAddsTarget > 0 ? (totalNetAddsAchieved / totalNetAddsTarget) * 100 : 0;
+            const freeTrialsPercent = totalFreeTrialsTarget > 0 ? (totalFreeTrialsAchieved / totalFreeTrialsTarget) * 100 : 0;
+
+            // Update KPI values
+            grossRevenueEl.textContent = formatCurrency(grossRevenueAchieved);
+            grossRevenueChangeEl.textContent = (grossRevenuePercent >= 0 ? '+' : '') + grossRevenuePercent.toFixed(1) + '% vs Target';
+            grossRevenueChangeEl.className = 'kpi-change ' + (grossRevenuePercent >= 100 ? 'positive' : grossRevenuePercent >= 50 ? 'warning' : 'poor');
+
+            netRevenueEl.textContent = formatCurrency(netRevenueAchieved);
+            netRevenueChangeEl.textContent = (netRevenuePercent >= 0 ? '+' : '') + netRevenuePercent.toFixed(1) + '% vs Target';
+            netRevenueChangeEl.className = 'kpi-change ' + (netRevenuePercent >= 100 ? 'positive' : netRevenuePercent >= 50 ? 'warning' : 'poor');
+
+            totalGrossAddsEl.textContent = totalGrossAddsAchieved.toLocaleString();
+            grossAddsChangeEl.textContent = (grossAddsPercent >= 0 ? '+' : '') + grossAddsPercent.toFixed(1) + '% vs Target';
+            grossAddsChangeEl.className = 'kpi-change ' + (grossAddsPercent >= 100 ? 'positive' : grossAddsPercent >= 50 ? 'warning' : 'poor');
+
+            totalNetAddsEl.textContent = totalNetAddsAchieved.toLocaleString();
+            netAddsChangeEl.textContent = (netAddsPercent >= 0 ? '+' : '') + netAddsPercent.toFixed(1) + '% vs Target';
+            netAddsChangeEl.className = 'kpi-change ' + (netAddsPercent >= 100 ? 'positive' : netAddsPercent >= 50 ? 'warning' : 'poor');
+
+            totalFreeTrialsEl.textContent = totalFreeTrialsAchieved.toLocaleString();
+            freeTrialsChangeEl.textContent = (freeTrialsPercent >= 0 ? '+' : '') + freeTrialsPercent.toFixed(1) + '% vs Target';
+            freeTrialsChangeEl.className = 'kpi-change ' + (freeTrialsPercent >= 100 ? 'positive' : freeTrialsPercent >= 50 ? 'warning' : 'poor');
+        }
+
+        // UPDATED: Update tables with dynamic % of Target and Cumulative Performance
+        function updateTables() {
+            updateRevenueTable();
+            updateAcquisitionTable();
+        }
+
+        // UPDATED: Update revenue table with dynamic calculations
+        function updateRevenueTable() {
+            const tableBody = document.querySelector('#revenue-table tbody');
+            tableBody.innerHTML = '';
+
+            // Calculate cumulative YTD values for each owner, product, and metric combination
+            const cumulativeData = {};
+
+            // First, organize data by owner, product, and metric
+            for (let i = 0; i < filteredRevenueData.length; i++) {
+                const item = filteredRevenueData[i];
+                if (item.quarter.includes('Cumulative')) continue; // Skip cumulative rows from data
+
+                const key = item.owner + '|' + item.product + '|' + item.metric;
+
+                if (!cumulativeData[key]) {
+                    cumulativeData[key] = {
+                        target: 0,
+                        achieved: 0
+                    };
+                }
+
+                cumulativeData[key].target += item.target;
+                cumulativeData[key].achieved += item.achieved;
+            }
+
+            // Display regular quarter data
+            for (let i = 0; i < filteredRevenueData.length; i++) {
+                const item = filteredRevenueData[i];
+                if (item.quarter.includes('Cumulative')) continue; // Skip cumulative rows from data
+
+                const row = document.createElement('tr');
+
+                // Calculate % of Target dynamically
+                const percentOfTarget = item.target > 0 ? (item.achieved / item.target) * 100 : 0;
+                const percentClass = percentOfTarget >= 100 ? 'good' :
+                    percentOfTarget >= 50 ? 'warning' : 'poor';
+
+                // Calculate cumulative YTD
+                const key = item.owner + '|' + item.product + '|' + item.metric;
+                const cumulative = cumulativeData[key] || {
+                    achieved: 0,
+                    target: 0
+                };
+                const cumulativePercent = cumulative.target > 0 ? (cumulative.achieved / cumulative.target) * 100 : 0;
+                const cumulativeClass = cumulativePercent >= 100 ? 'good' :
+                    cumulativePercent >= 50 ? 'warning' : 'poor';
+
+                row.innerHTML = '<td>' + item.quarter + '</td>' +
+                    '<td>' + item.owner + '</td>' +
+                    '<td>' + item.product + '</td>' +
+                    '<td>' + item.metric + '</td>' +
+                    '<td class="currency">' + formatCurrency(item.target) + '</td>' +
+                    '<td class="currency">' + formatCurrency(item.achieved) + '</td>' +
+                    '<td class="percentage ' + percentClass + '">' + percentOfTarget.toFixed(2) + '%</td>' +
+                    '<td class="percentage ' + cumulativeClass + '">' + cumulativePercent.toFixed(2) + '%</td>';
+
+                tableBody.appendChild(row);
+            }
+
+            // If no data, show message
+            if (filteredRevenueData.length === 0) {
+                const row = document.createElement('tr');
+                row.innerHTML = '<td colspan="8" style="text-align: center; padding: 30px;">No revenue data available for the selected filters</td>';
+                tableBody.appendChild(row);
+            }
+        }
+
+        // UPDATED: Update acquisition table with dynamic calculations
+        function updateAcquisitionTable() {
+            const tableBody = document.querySelector('#acquisition-table tbody');
+            tableBody.innerHTML = '';
+
+            // Calculate cumulative YTD values for each owner, product, and metric combination
+            const cumulativeData = {};
+
+            // First, organize data by owner, product, and metric
+            for (let i = 0; i < filteredAcquisitionData.length; i++) {
+                const item = filteredAcquisitionData[i];
+                if (item.quarter.includes('Cumulative')) continue; // Skip cumulative rows from data
+
+                const key = item.owner + '|' + item.product + '|' + item.metric;
+
+                if (!cumulativeData[key]) {
+                    cumulativeData[key] = {
+                        target: 0,
+                        achieved: 0
+                    };
+                }
+
+                cumulativeData[key].target += item.target;
+                cumulativeData[key].achieved += item.achieved;
+            }
+
+            // Display regular quarter data
+            for (let i = 0; i < filteredAcquisitionData.length; i++) {
+                const item = filteredAcquisitionData[i];
+                if (item.quarter.includes('Cumulative')) continue; // Skip cumulative rows from data
+
+                const row = document.createElement('tr');
+
+                // Calculate % of Target dynamically
+                const percentOfTarget = item.target > 0 ? (item.achieved / item.target) * 100 : 0;
+                const percentClass = percentOfTarget >= 100 ? 'good' :
+                    percentOfTarget >= 50 ? 'warning' : 'poor';
+
+                // Calculate cumulative YTD
+                const key = item.owner + '|' + item.product + '|' + item.metric;
+                const cumulative = cumulativeData[key] || {
+                    achieved: 0,
+                    target: 0
+                };
+                const cumulativePercent = cumulative.target > 0 ? (cumulative.achieved / cumulative.target) * 100 : 0;
+                const cumulativeClass = cumulativePercent >= 100 ? 'good' :
+                    cumulativePercent >= 50 ? 'warning' : 'poor';
+
+                row.innerHTML = '<td>' + item.quarter + '</td>' +
+                    '<td>' + item.owner + '</td>' +
+                    '<td>' + item.product + '</td>' +
+                    '<td>' + item.metric + '</td>' +
+                    '<td>' + item.target.toLocaleString() + '</td>' +
+                    '<td>' + item.achieved.toLocaleString() + '</td>' +
+                    '<td class="percentage ' + percentClass + '">' + percentOfTarget.toFixed(2) + '%</td>' +
+                    '<td class="percentage ' + cumulativeClass + '">' + cumulativePercent.toFixed(2) + '%</td>';
+
+                tableBody.appendChild(row);
+            }
+
+            // If no data, show message
+            if (filteredAcquisitionData.length === 0) {
+                const row = document.createElement('tr');
+                row.innerHTML = '<td colspan="8" style="text-align: center; padding: 30px;">No acquisition data available for the selected filters</td>';
+                tableBody.appendChild(row);
+            }
+        }
+
+        // Update charts
+        function updateCharts() {
+            updateRevenueTrendsChart();
+            updateAcquisitionTrendsChart();
+            updateOwnerPerformanceChart();
+            updateProductPerformanceChart();
+        }
+
+        // Update revenue trends chart
+        function updateRevenueTrendsChart() {
+            const ctx = document.getElementById('revenue-trends-chart').getContext('2d');
+
+            // Group data by quarter and metric
+            const quarterData = {};
+
+            for (let i = 0; i < filteredRevenueData.length; i++) {
+                const item = filteredRevenueData[i];
+                const quarter = item.quarter;
+
+                if (!quarterData[quarter]) {
+                    quarterData[quarter] = {
+                        grossRevenue: {
+                            target: 0,
+                            achieved: 0
+                        },
+                        netRevenue: {
+                            target: 0,
+                            achieved: 0
+                        }
+                    };
+                }
+
+                if (item.metric === 'Gross Revenue') {
+                    quarterData[quarter].grossRevenue.target += item.target;
+                    quarterData[quarter].grossRevenue.achieved += item.achieved;
+                } else if (item.metric === 'Net Revenue') {
+                    quarterData[quarter].netRevenue.target += item.target;
+                    quarterData[quarter].netRevenue.achieved += item.achieved;
+                }
+            }
+
+            // Prepare chart data
+            const quarters = [];
+            for (let q in quarterData) {
+                if (q.indexOf('Cumulative') === -1) {
+                    quarters.push(q);
+                }
+            }
+
+            // Sort quarters
+            quarters.sort(function(a, b) {
+                const qOrder = {
+                    'Q1': 1,
+                    'Q2': 2,
+                    'Q3': 3,
+                    'Q4': 4
+                };
+                return qOrder[a] - qOrder[b];
+            });
+
+            const grossRevenueTargets = [];
+            const grossRevenueAchieved = [];
+            const netRevenueTargets = [];
+            const netRevenueAchieved = [];
+
+            for (let i = 0; i < quarters.length; i++) {
+                const q = quarters[i];
+                const data = quarterData[q] || {
+                    grossRevenue: {
+                        target: 0,
+                        achieved: 0
+                    },
+                    netRevenue: {
+                        target: 0,
+                        achieved: 0
+                    }
+                };
+                grossRevenueTargets.push(data.grossRevenue.target || 0);
+                grossRevenueAchieved.push(data.grossRevenue.achieved || 0);
+                netRevenueTargets.push(data.netRevenue.target || 0);
+                netRevenueAchieved.push(data.netRevenue.achieved || 0);
+            }
+
+            // Destroy previous chart if it exists
+            if (revenueTrendsChart) {
+                revenueTrendsChart.destroy();
+            }
+
+            // Get colors for current theme
+            const gridColor = isDarkMode ? '#333' : '#e0e0e0';
+            const textColor = isDarkMode ? '#e0e0e0' : '#333';
+            const tickColor = isDarkMode ? '#b0b0b0' : '#666';
+
+            // Create new chart
+            revenueTrendsChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: quarters,
+                    datasets: [{
+                        label: 'Gross Revenue Target',
+                        data: grossRevenueTargets,
+                        backgroundColor: 'rgba(26, 35, 126, 0.3)',
+                        borderColor: 'rgba(26, 35, 126, 1)',
+                        borderWidth: 1,
+                        type: 'line',
+                        fill: false,
+                        tension: 0.1
+                    }, {
+                        label: 'Gross Revenue Achieved',
+                        data: grossRevenueAchieved,
+                        backgroundColor: 'rgba(92, 107, 192, 0.7)',
+                        borderColor: 'rgba(92, 107, 192, 1)',
+                        borderWidth: 1
+                    }, {
+                        label: 'Net Revenue Target',
+                        data: netRevenueTargets,
+                        backgroundColor: 'rgba(0, 200, 83, 0.3)',
+                        borderColor: 'rgba(0, 200, 83, 1)',
+                        borderWidth: 1,
+                        type: 'line',
+                        fill: false,
+                        tension: 0.1
+                    }, {
+                        label: 'Net Revenue Achieved',
+                        data: netRevenueAchieved,
+                        backgroundColor: 'rgba(0, 200, 83, 0.7)',
+                        borderColor: 'rgba(0, 200, 83, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            grid: {
+                                color: gridColor
+                            },
+                            ticks: {
+                                color: tickColor
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: gridColor
+                            },
+                            ticks: {
+                                color: tickColor,
+                                callback: function(value) {
+                                    return formatCurrency(value, true);
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                color: textColor
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    var label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    label += formatCurrency(context.raw);
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Update acquisition trends chart
+        function updateAcquisitionTrendsChart() {
+            const ctx = document.getElementById('acquisition-trends-chart').getContext('2d');
+
+            // Group data by quarter and metric
+            const quarterData = {};
+
+            for (let i = 0; i < filteredAcquisitionData.length; i++) {
+                const item = filteredAcquisitionData[i];
+                const quarter = item.quarter;
+
+                if (!quarterData[quarter]) {
+                    quarterData[quarter] = {
+                        grossAdds: {
+                            target: 0,
+                            achieved: 0
+                        },
+                        netAdds: {
+                            target: 0,
+                            achieved: 0
+                        },
+                        freeTrial: {
+                            target: 0,
+                            achieved: 0
+                        }
+                    };
+                }
+
+                if (item.metric === 'Gross Adds') {
+                    quarterData[quarter].grossAdds.target += item.target;
+                    quarterData[quarter].grossAdds.achieved += item.achieved;
+                } else if (item.metric === 'Net Adds') {
+                    quarterData[quarter].netAdds.target += item.target;
+                    quarterData[quarter].netAdds.achieved += item.achieved;
+                } else if (item.metric === 'Free Trial') {
+                    quarterData[quarter].freeTrial.target += item.target;
+                    quarterData[quarter].freeTrial.achieved += item.achieved;
+                }
+            }
+
+            // Prepare chart data
+            const quarters = [];
+            for (let q in quarterData) {
+                if (q.indexOf('Cumulative') === -1) {
+                    quarters.push(q);
+                }
+            }
+
+            // Sort quarters
+            quarters.sort(function(a, b) {
+                const qOrder = {
+                    'Q1': 1,
+                    'Q2': 2,
+                    'Q3': 3,
+                    'Q4': 4
+                };
+                return qOrder[a] - qOrder[b];
+            });
+
+            const grossAddsAchieved = [];
+            const netAddsAchieved = [];
+            const freeTrialAchieved = [];
+
+            for (let i = 0; i < quarters.length; i++) {
+                const q = quarters[i];
+                const data = quarterData[q] || {
+                    grossAdds: {
+                        achieved: 0
+                    },
+                    netAdds: {
+                        achieved: 0
+                    },
+                    freeTrial: {
+                        achieved: 0
+                    }
+                };
+                grossAddsAchieved.push(data.grossAdds.achieved || 0);
+                netAddsAchieved.push(data.netAdds.achieved || 0);
+                freeTrialAchieved.push(data.freeTrial.achieved || 0);
+            }
+
+            // Destroy previous chart if it exists
+            if (acquisitionTrendsChart) {
+                acquisitionTrendsChart.destroy();
+            }
+
+            // Get colors for current theme
+            const gridColor = isDarkMode ? '#333' : '#e0e0e0';
+            const textColor = isDarkMode ? '#e0e0e0' : '#333';
+            const tickColor = isDarkMode ? '#b0b0b0' : '#666';
+
+            // Create new chart
+            acquisitionTrendsChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: quarters,
+                    datasets: [{
+                        label: 'Gross Adds',
+                        data: grossAddsAchieved,
+                        backgroundColor: 'rgba(26, 35, 126, 0.1)',
+                        borderColor: 'rgba(26, 35, 126, 1)',
+                        borderWidth: 3,
+                        tension: 0.2,
+                        fill: true
+                    }, {
+                        label: 'Net Adds',
+                        data: netAddsAchieved,
+                        backgroundColor: 'rgba(0, 200, 83, 0.1)',
+                        borderColor: 'rgba(0, 200, 83, 1)',
+                        borderWidth: 3,
+                        tension: 0.2,
+                        fill: true
+                    }, {
+                        label: 'Free Trial',
+                        data: freeTrialAchieved,
+                        backgroundColor: 'rgba(255, 152, 0, 0.1)',
+                        borderColor: 'rgba(255, 152, 0, 1)',
+                        borderWidth: 3,
+                        tension: 0.2,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            grid: {
+                                color: gridColor
+                            },
+                            ticks: {
+                                color: tickColor
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: gridColor
+                            },
+                            ticks: {
+                                color: tickColor
+                            },
+                            title: {
+                                display: true,
+                                text: 'Number of Adds',
+                                color: textColor
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                color: textColor
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Update owner performance chart
+        function updateOwnerPerformanceChart() {
+            const ctx = document.getElementById('owner-performance-chart').getContext('2d');
+
+            // Group data by owner
+            const ownerData = {};
+
+            for (let i = 0; i < filteredRevenueData.length; i++) {
+                const item = filteredRevenueData[i];
+                const owner = item.owner;
+
+                if (!ownerData[owner]) {
+                    ownerData[owner] = {
+                        achieved: 0,
+                        target: 0
+                    };
+                }
+
+                ownerData[owner].achieved += item.achieved;
+                ownerData[owner].target += item.target;
+            }
+
+            // Prepare chart data
+            const ownerNames = [];
+            for (let owner in ownerData) {
+                ownerNames.push(owner);
+            }
+
+            const ownerAchieved = [];
+            const ownerTarget = [];
+
+            for (let i = 0; i < ownerNames.length; i++) {
+                const owner = ownerNames[i];
+                ownerAchieved.push(ownerData[owner].achieved || 0);
+                ownerTarget.push(ownerData[owner].target || 0);
+            }
+
+            // Destroy previous chart if it exists
+            if (ownerPerformanceChart) {
+                ownerPerformanceChart.destroy();
+            }
+
+            // Get colors for current theme
+            const gridColor = isDarkMode ? '#333' : '#e0e0e0';
+            const textColor = isDarkMode ? '#e0e0e0' : '#333';
+            const tickColor = isDarkMode ? '#b0b0b0' : '#666';
+
+            // Create new chart
+            ownerPerformanceChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ownerNames,
+                    datasets: [{
+                        label: 'Achieved',
+                        data: ownerAchieved,
+                        backgroundColor: 'rgba(92, 107, 192, 0.7)',
+                        borderColor: 'rgba(92, 107, 192, 1)',
+                        borderWidth: 1
+                    }, {
+                        label: 'Target',
+                        data: ownerTarget,
+                        backgroundColor: 'rgba(26, 35, 126, 0.3)',
+                        borderColor: 'rgba(26, 35, 126, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            grid: {
+                                color: gridColor
+                            },
+                            ticks: {
+                                color: tickColor
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: gridColor
+                            },
+                            ticks: {
+                                color: tickColor,
+                                callback: function(value) {
+                                    return formatCurrency(value, true);
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                color: textColor
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    var label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    label += formatCurrency(context.raw);
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Update product performance chart
+        function updateProductPerformanceChart() {
+            const ctx = document.getElementById('product-performance-chart').getContext('2d');
+
+            // Group data by product
+            const productData = {};
+
+            for (let i = 0; i < filteredRevenueData.length; i++) {
+                const item = filteredRevenueData[i];
+                const product = item.product;
+
+                if (!productData[product]) {
+                    productData[product] = {
+                        achieved: 0,
+                        target: 0
+                    };
+                }
+
+                productData[product].achieved += item.achieved;
+                productData[product].target += item.target;
+            }
+
+            // Prepare chart data
+            const productNames = [];
+            for (let product in productData) {
+                productNames.push(product);
+            }
+
+            const productAchieved = [];
+            const productTarget = [];
+
+            for (let i = 0; i < productNames.length; i++) {
+                const product = productNames[i];
+                productAchieved.push(productData[product].achieved || 0);
+                productTarget.push(productData[product].target || 0);
+            }
+
+            // Calculate percentages
+            const productPercentages = [];
+            for (let i = 0; i < productNames.length; i++) {
+                const target = productTarget[i];
+                const achieved = productAchieved[i];
+                productPercentages.push(target > 0 ? (achieved / target) * 100 : 0);
+            }
+
+            // Destroy previous chart if it exists
+            if (productPerformanceChart) {
+                productPerformanceChart.destroy();
+            }
+
+            // Get colors for current theme
+            const textColor = isDarkMode ? '#e0e0e0' : '#333';
+
+            // Create new chart
+            productPerformanceChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: productNames,
+                    datasets: [{
+                        data: productAchieved,
+                        backgroundColor: [
+                            'rgba(26, 35, 126, 0.8)',
+                            'rgba(92, 107, 192, 0.8)',
+                            'rgba(0, 200, 83, 0.8)',
+                            'rgba(255, 152, 0, 0.8)',
+                            'rgba(244, 67, 54, 0.8)'
+                        ],
+                        borderColor: [
+                            'rgba(26, 35, 126, 1)',
+                            'rgba(92, 107, 192, 1)',
+                            'rgba(0, 200, 83, 1)',
+                            'rgba(255, 152, 0, 1)',
+                            'rgba(244, 67, 54, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                color: textColor
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    var product = context.label;
+                                    var achieved = context.raw;
+                                    var target = productTarget[context.dataIndex];
+                                    var percentage = productPercentages[context.dataIndex];
+                                    return [
+                                        product + ': ' + formatCurrency(achieved),
+                                        'Target: ' + formatCurrency(target),
+                                        'Achievement: ' + percentage.toFixed(1) + '%'
+                                    ];
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Helper function to format currency
+        function formatCurrency(value, short) {
+            if (value === 0) return 'KES0';
+
+            if (short) {
+                if (value >= 1000000) {
+                    return 'KES' + (value / 1000000).toFixed(1) + 'M';
+                } else if (value >= 1000) {
+                    return 'KES' + (value / 1000).toFixed(1) + 'K';
+                }
+            }
+
+            return 'KES' + value.toLocaleString('en-US');
+        }
+
+        // Show loading indicator
+        function showLoading() {
+            loadingIndicator.style.display = 'block';
+            dashboardContent.classList.add('hidden');
+        }
+
+        // Hide loading indicator
+        function hideLoading() {
+            loadingIndicator.style.display = 'none';
+            dashboardContent.classList.remove('hidden');
+        }
+    </script>
+</body>
+
+</html>
